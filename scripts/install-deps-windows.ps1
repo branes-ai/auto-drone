@@ -140,11 +140,23 @@ function Install-OpenCV-Manual {
     Write-Host ">>> Extracting OpenCV..."
     Start-Process -FilePath $opencvZip -ArgumentList "-o`"C:\`" -y" -Wait -NoNewWindow
 
-    # Rename to standard location
-    if (Test-Path "C:\opencv") {
-        Remove-Item "C:\opencv" -Recurse -Force
+    # The OpenCV self-extracting archive creates C:\opencv directly
+    # If OpenCVPath is different from C:\opencv, we need to rename
+    if ($OpenCVPath -ne "C:\opencv") {
+        if (Test-Path $OpenCVPath) {
+            Remove-Item $OpenCVPath -Recurse -Force
+        }
+        if (Test-Path "C:\opencv") {
+            Rename-Item "C:\opencv" $OpenCVPath
+        }
     }
-    Rename-Item "C:\opencv-$opencvVersion" $OpenCVPath
+
+    # Verify extraction succeeded
+    if (-not (Test-Path "$OpenCVPath\build\OpenCVConfig.cmake")) {
+        Write-Host ">>> ERROR: OpenCV extraction failed. Directory contents:" -ForegroundColor Red
+        Get-ChildItem "C:\" | Where-Object { $_.Name -like "opencv*" } | ForEach-Object { Write-Host "    $_" }
+        throw "OpenCV was not extracted correctly"
+    }
 
     # Set environment variables
     $opencvBin = "$OpenCVPath\build\x64\vc16\bin"
