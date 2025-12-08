@@ -116,6 +116,7 @@ jobs:
           Invoke-WebRequest -Uri $opencvUrl -OutFile opencv-installer.exe
           Start-Process -FilePath .\opencv-installer.exe -ArgumentList "-oC:\ -y" -Wait -NoNewWindow
           echo "OpenCV_DIR=C:\opencv\build\x64\vc16\lib" >> $env:GITHUB_ENV
+          echo "C:\opencv\build\x64\vc16\bin" >> $env:GITHUB_PATH
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -140,6 +141,9 @@ jobs:
           cmake .. -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=C:\zenohc
           cmake --build . --config Release --parallel
           cmake --install . --config Release
+
+      - name: Add Zenoh to PATH
+        run: echo "C:\zenohc\bin" >> $env:GITHUB_PATH
 
       - name: Configure
         run: |

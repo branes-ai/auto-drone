@@ -17,7 +17,7 @@
 #include <vector>
 #include <string>
 #include <map>
-#include <getopt.h>
+#include <cstring>
 
 namespace {
 
@@ -156,35 +156,28 @@ void print_usage(const char* program_name) {
 int main(int argc, char* argv[]) {
     // Setup signal handling for graceful shutdown
     std::signal(SIGINT, signal_handler);
+#ifndef _WIN32
     std::signal(SIGTERM, signal_handler);
+#endif
 
     // Default options
     int num_cameras = -1;  // -1 means auto-detect
     int target_fps = 30;
 
-    // Parse command line arguments
-    static struct option long_options[] = {
-        {"num-cameras", required_argument, nullptr, 'n'},
-        {"fps",         required_argument, nullptr, 'f'},
-        {"help",        no_argument,       nullptr, 'h'},
-        {nullptr,       0,                 nullptr, 0}
-    };
-
-    int opt;
-    while ((opt = getopt_long(argc, argv, "n:f:h", long_options, nullptr)) != -1) {
-        switch (opt) {
-            case 'n':
-                num_cameras = std::atoi(optarg);
-                break;
-            case 'f':
-                target_fps = std::atoi(optarg);
-                break;
-            case 'h':
-                print_usage(argv[0]);
-                return 0;
-            default:
-                print_usage(argv[0]);
-                return 1;
+    // Parse command line arguments (cross-platform)
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+        if ((arg == "-n" || arg == "--num-cameras") && i + 1 < argc) {
+            num_cameras = std::atoi(argv[++i]);
+        } else if ((arg == "-f" || arg == "--fps") && i + 1 < argc) {
+            target_fps = std::atoi(argv[++i]);
+        } else if (arg == "-h" || arg == "--help") {
+            print_usage(argv[0]);
+            return 0;
+        } else {
+            std::cerr << "Unknown argument: " << arg << std::endl;
+            print_usage(argv[0]);
+            return 1;
         }
     }
 
