@@ -11,6 +11,17 @@ target_link_libraries(mock_publisher PRIVATE
     ${OpenCV_LIBS}
 )
 
+# Webcam Publisher - captures from physical cameras
+add_executable(webcam_publisher
+    WebcamPublisher.cpp
+)
+
+target_link_libraries(webcam_publisher PRIVATE
+    zenoh_interface
+    data_types
+    ${OpenCV_LIBS}
+)
+
 # Viewer Node - subscribes and displays sensor data (requires display)
 add_executable(viewer_node
     ViewerNode.cpp
