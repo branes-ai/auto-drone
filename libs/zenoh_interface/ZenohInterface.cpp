@@ -1,4 +1,4 @@
-#include "ZenohInterface.h"
+#include "ZenohInterface.hpp"
 #include <iostream>
 
 namespace zenoh_interface {
