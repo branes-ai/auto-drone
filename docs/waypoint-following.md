@@ -66,7 +66,7 @@ This directory now contains the specific logic that adapts the generic `ControlC
 
 The CMake setup for the three new executables needs to link the new libraries.
 
-#### `demonstrations/01_waypoint_following/CMakeLists.txt`
+#### `demos/01_waypoint_following/CMakeLists.txt`
 
 This folder now holds two new executables: `planner_node` and `controller_node`.
 

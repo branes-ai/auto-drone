@@ -1,4 +1,4 @@
-# Sensor Streaming
+# Sensor Streaming (Phase 1)
 
 Focusing on a concrete demonstration program will solidify the core infrastructure—the Zenoh data fabric and the CMake setup, before tackling complex autonomy.
 
@@ -135,7 +135,7 @@ target_link_libraries(zenoh_interface PUBLIC
 
 ```
 
-#### `demonstrations/01_sensor_streaming/CMakeLists.txt`
+#### `demos/01_sensor_streaming/CMakeLists.txt`
 
 ```cmake
 # Create the executable for the subscriber/viewer
