@@ -151,7 +151,7 @@ int main(int argc, char* argv[]) {
             if (session.publish(odom_key, payload)) {
                 odom_count++;
                 if (odom_count % odom_rate == 0) {
-                    std::cout << "[Odom] x=" << odom.x << " y=" << odom.y << " z=" << odom.z
+                    std::cout << "[Odometry] x=" << odom.x << " y=" << odom.y << " z=" << odom.z
                               << " yaw=" << odom.yaw << std::endl;
                 }
             }
