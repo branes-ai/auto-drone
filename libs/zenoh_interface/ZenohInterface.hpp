@@ -1,43 +1,49 @@
 #pragma once
 
-#include <zenohc.h>
+#include <zenoh.h>
 #include <string>
 #include <vector>
 #include <functional>
+#include <memory>
 
 namespace zenoh_interface {
 
 // Define the function signature for a generic Zenoh callback
 using ZenohCallback = std::function<void(const std::string& key, const std::vector<uint8_t>& payload)>;
 
-/**
- * @brief Initializes and opens a Zenoh session.
- * @return A valid zenohc_session_t pointer or nullptr on failure.
- */
-zenohc_session_t* init_session();
+// Forward declaration for subscriber context
+struct SubscriberContext;
 
-/**
- * @brief Closes and releases the Zenoh session resources.
- * @param session The session to close.
- */
-void close_session(zenohc_session_t* session);
+// RAII wrapper for Zenoh session
+class Session {
+public:
+    Session();
+    ~Session();
 
-/**
- * @brief Publishes data to a specific Zenoh key expression.
- * @param session The active Zenoh session.
- * @param key_expr The Zenoh key expression (e.g., "robot/drone/sensor/camera/rgb").
- * @param payload The raw byte data to publish.
- * @return true on success, false otherwise.
- */
-bool publish(zenohc_session_t* session, const std::string& key_expr, const std::vector<uint8_t>& payload);
+    // Non-copyable
+    Session(const Session&) = delete;
+    Session& operator=(const Session&) = delete;
 
-/**
- * @brief Subscribes to a key expression and registers a callback function.
- * @param session The active Zenoh session.
- * @param key_expr The key expression to subscribe to (can include wildcards).
- * @param callback The function to execute when a new sample arrives.
- * @return A zenohc_subscriber_t pointer for managing the subscription.
- */
-zenohc_subscriber_t* subscribe(zenohc_session_t* session, const std::string& key_expr, ZenohCallback callback);
+    // Movable
+    Session(Session&& other) noexcept;
+    Session& operator=(Session&& other) noexcept;
+
+    bool is_valid() const;
+
+    // Publish data to a key expression
+    bool publish(const std::string& key_expr, const std::vector<uint8_t>& payload);
+
+    // Subscribe to a key expression with a callback
+    // Returns subscriber ID, or -1 on failure
+    int subscribe(const std::string& key_expr, ZenohCallback callback);
+
+    // Unsubscribe by ID
+    void unsubscribe(int subscriber_id);
+
+private:
+    z_owned_session_t session_;
+    bool valid_ = false;
+    std::vector<std::unique_ptr<SubscriberContext>> subscribers_;
+};
 
 } // namespace zenoh_interface

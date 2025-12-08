@@ -1,3 +1,27 @@
+# Build directories
+build/
+install/
+out/
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+compile_commands.json
+CTestTestfile.cmake
+_deps/
+
+# CMakeUserPresets.json (user-specific presets)
+CMakeUserPresets.json
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
 # Prerequisites
 *.d
 

@@ -8,19 +8,61 @@ This is a **Zenoh-based R&D environment for autonomous drone/robot development**
 
 ## Build System
 
-```bash
-# Configure (requires zenohc and OpenCV installed)
-cmake -B build -S .
+### Prerequisites
 
-# Build
-cmake --build build
+- CMake 3.21+ (for presets)
+- C++20 compiler (GCC 11+, Clang 14+, MSVC 2022)
+- Ninja build system
+- Zenoh-C library
+- OpenCV 4.x
+
+### Installing Dependencies
+
+See `docs/INSTALL.md` for detailed instructions, or use the install scripts:
+
+```bash
+# Linux
+./scripts/install-deps-linux.sh
+
+# macOS
+./scripts/install-deps-macos.sh
+
+# Windows (PowerShell as Administrator)
+.\scripts\install-deps-windows.ps1
 ```
 
-**Prerequisites:**
-- CMake 3.16+
-- C++20 compiler
-- Zenoh-C library (`find_package(zenohc)`)
-- OpenCV
+### Building with CMake Presets
+
+```bash
+# Linux
+cmake --preset linux-release
+cmake --build --preset linux-release
+ctest --preset linux-release
+
+# macOS
+cmake --preset macos-release
+cmake --build --preset macos-release
+ctest --preset macos-release
+
+# Windows (Visual Studio)
+cmake --preset windows-release
+cmake --build --preset windows-release
+ctest --preset windows-release
+
+# Windows (Ninja from VS Developer Command Prompt)
+cmake --preset windows-ninja-release
+cmake --build --preset windows-ninja-release
+```
+
+### Running the Demo
+
+```bash
+# Terminal 1: Start the mock publisher
+./build/linux-release/demos/01_sensor_streaming/mock_publisher
+
+# Terminal 2: Start the viewer
+./build/linux-release/demos/01_sensor_streaming/viewer_node
+```
 
 ## Architecture
 
