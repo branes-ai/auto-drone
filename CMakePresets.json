@@ -1,0 +1,299 @@
+{
+    "version": 6,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 21,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "base",
+            "hidden": true,
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "installDir": "${sourceDir}/install/${presetName}",
+            "cacheVariables": {
+                "CMAKE_CXX_STANDARD": "20",
+                "CMAKE_CXX_STANDARD_REQUIRED": "ON",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+            }
+        },
+        {
+            "name": "base-debug",
+            "hidden": true,
+            "inherits": "base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "BUILD_TESTING": "ON"
+            }
+        },
+        {
+            "name": "base-release",
+            "hidden": true,
+            "inherits": "base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "BUILD_TESTING": "ON"
+            }
+        },
+        {
+            "name": "linux-debug",
+            "displayName": "Linux Debug (Ninja)",
+            "description": "Linux debug build with Ninja generator",
+            "inherits": "base-debug",
+            "generator": "Ninja",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Linux"
+            }
+        },
+        {
+            "name": "linux-release",
+            "displayName": "Linux Release (Ninja)",
+            "description": "Linux release build with Ninja generator",
+            "inherits": "base-release",
+            "generator": "Ninja",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Linux"
+            }
+        },
+        {
+            "name": "macos-debug",
+            "displayName": "macOS Debug (Ninja)",
+            "description": "macOS debug build with Ninja generator",
+            "inherits": "base-debug",
+            "generator": "Ninja",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Darwin"
+            }
+        },
+        {
+            "name": "macos-release",
+            "displayName": "macOS Release (Ninja)",
+            "description": "macOS release build with Ninja generator",
+            "inherits": "base-release",
+            "generator": "Ninja",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Darwin"
+            }
+        },
+        {
+            "name": "windows-debug",
+            "displayName": "Windows Debug (Visual Studio)",
+            "description": "Windows debug build with Visual Studio 2022 generator",
+            "inherits": "base",
+            "generator": "Visual Studio 17 2022",
+            "architecture": {
+                "value": "x64",
+                "strategy": "set"
+            },
+            "cacheVariables": {
+                "BUILD_TESTING": "ON"
+            },
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            }
+        },
+        {
+            "name": "windows-release",
+            "displayName": "Windows Release (Visual Studio)",
+            "description": "Windows release build with Visual Studio 2022 generator",
+            "inherits": "base",
+            "generator": "Visual Studio 17 2022",
+            "architecture": {
+                "value": "x64",
+                "strategy": "set"
+            },
+            "cacheVariables": {
+                "BUILD_TESTING": "ON"
+            },
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            }
+        },
+        {
+            "name": "windows-ninja-debug",
+            "displayName": "Windows Debug (Ninja)",
+            "description": "Windows debug build with Ninja (use from VS Developer Command Prompt)",
+            "inherits": "base-debug",
+            "generator": "Ninja",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            }
+        },
+        {
+            "name": "windows-ninja-release",
+            "displayName": "Windows Release (Ninja)",
+            "description": "Windows release build with Ninja (use from VS Developer Command Prompt)",
+            "inherits": "base-release",
+            "generator": "Ninja",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            }
+        },
+        {
+            "name": "windows-vcpkg-debug",
+            "displayName": "Windows Debug (Visual Studio + vcpkg)",
+            "description": "Windows debug build with vcpkg toolchain",
+            "inherits": "windows-debug",
+            "cacheVariables": {
+                "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+            }
+        },
+        {
+            "name": "windows-vcpkg-release",
+            "displayName": "Windows Release (Visual Studio + vcpkg)",
+            "description": "Windows release build with vcpkg toolchain",
+            "inherits": "windows-release",
+            "cacheVariables": {
+                "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "linux-debug",
+            "displayName": "Linux Debug",
+            "configurePreset": "linux-debug"
+        },
+        {
+            "name": "linux-release",
+            "displayName": "Linux Release",
+            "configurePreset": "linux-release"
+        },
+        {
+            "name": "macos-debug",
+            "displayName": "macOS Debug",
+            "configurePreset": "macos-debug"
+        },
+        {
+            "name": "macos-release",
+            "displayName": "macOS Release",
+            "configurePreset": "macos-release"
+        },
+        {
+            "name": "windows-debug",
+            "displayName": "Windows Debug (Visual Studio)",
+            "configurePreset": "windows-debug",
+            "configuration": "Debug"
+        },
+        {
+            "name": "windows-release",
+            "displayName": "Windows Release (Visual Studio)",
+            "configurePreset": "windows-release",
+            "configuration": "Release"
+        },
+        {
+            "name": "windows-ninja-debug",
+            "displayName": "Windows Debug (Ninja)",
+            "configurePreset": "windows-ninja-debug"
+        },
+        {
+            "name": "windows-ninja-release",
+            "displayName": "Windows Release (Ninja)",
+            "configurePreset": "windows-ninja-release"
+        },
+        {
+            "name": "windows-vcpkg-debug",
+            "displayName": "Windows Debug (vcpkg)",
+            "configurePreset": "windows-vcpkg-debug",
+            "configuration": "Debug"
+        },
+        {
+            "name": "windows-vcpkg-release",
+            "displayName": "Windows Release (vcpkg)",
+            "configurePreset": "windows-vcpkg-release",
+            "configuration": "Release"
+        }
+    ],
+    "testPresets": [
+        {
+            "name": "linux-debug",
+            "displayName": "Linux Debug Tests",
+            "configurePreset": "linux-debug",
+            "output": {
+                "outputOnFailure": true,
+                "verbosity": "default"
+            }
+        },
+        {
+            "name": "linux-release",
+            "displayName": "Linux Release Tests",
+            "configurePreset": "linux-release",
+            "output": {
+                "outputOnFailure": true,
+                "verbosity": "default"
+            }
+        },
+        {
+            "name": "macos-debug",
+            "displayName": "macOS Debug Tests",
+            "configurePreset": "macos-debug",
+            "output": {
+                "outputOnFailure": true,
+                "verbosity": "default"
+            }
+        },
+        {
+            "name": "macos-release",
+            "displayName": "macOS Release Tests",
+            "configurePreset": "macos-release",
+            "output": {
+                "outputOnFailure": true,
+                "verbosity": "default"
+            }
+        },
+        {
+            "name": "windows-debug",
+            "displayName": "Windows Debug Tests",
+            "configurePreset": "windows-debug",
+            "configuration": "Debug",
+            "output": {
+                "outputOnFailure": true,
+                "verbosity": "default"
+            }
+        },
+        {
+            "name": "windows-release",
+            "displayName": "Windows Release Tests",
+            "configurePreset": "windows-release",
+            "configuration": "Release",
+            "output": {
+                "outputOnFailure": true,
+                "verbosity": "default"
+            }
+        },
+        {
+            "name": "windows-ninja-debug",
+            "displayName": "Windows Ninja Debug Tests",
+            "configurePreset": "windows-ninja-debug",
+            "output": {
+                "outputOnFailure": true,
+                "verbosity": "default"
+            }
+        },
+        {
+            "name": "windows-ninja-release",
+            "displayName": "Windows Ninja Release Tests",
+            "configurePreset": "windows-ninja-release",
+            "output": {
+                "outputOnFailure": true,
+                "verbosity": "default"
+            }
+        }
+    ]
+}
