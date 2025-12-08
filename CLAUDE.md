@@ -60,8 +60,14 @@ cmake --build --preset windows-ninja-release
 # Terminal 1: Start the mock publisher
 ./build/linux-release/demos/01_sensor_streaming/mock_publisher
 
-# Terminal 2: Start the viewer
+# Terminal 2: Start the viewer (requires display)
 ./build/linux-release/demos/01_sensor_streaming/viewer_node
+
+# Terminal 2 (headless alternative): Console-only viewer
+./build/linux-release/demos/01_sensor_streaming/viewer_node_headless
+
+# With image saving
+./build/linux-release/demos/01_sensor_streaming/viewer_node_headless --save-images --output-dir ./frames
 ```
 
 ## Architecture
