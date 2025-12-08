@@ -5,6 +5,10 @@ add_library(data_types STATIC
     ImageData.hpp
     Odometry.cpp
     Odometry.hpp
+    Waypoint.cpp
+    Waypoint.hpp
+    VelocityCommand.cpp
+    VelocityCommand.hpp
 )
 
 target_link_libraries(data_types PUBLIC
