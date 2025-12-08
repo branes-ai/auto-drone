@@ -62,7 +62,7 @@ endif()
 # --- Core Libraries ---
 add_subdirectory(libs/data_types)
 add_subdirectory(libs/zenoh_interface)
-# add_subdirectory(libs/control_algorithms)  # Phase 2
+add_subdirectory(libs/control_algorithms)
 
 # --- Simulation/Platform Interfaces ---
 # add_subdirectory(sim_interfaces/airsim_client)  # After mock publisher works
@@ -76,5 +76,6 @@ add_subdirectory(libs/zenoh_interface)
 
 # --- Demonstrations ---
 add_subdirectory(demos/01_sensor_streaming)
-# add_subdirectory(demos/02_object_tracking)    # Phase 3
-# add_subdirectory(demos/03_obstacle_avoidance) # Phase 4
+add_subdirectory(demos/02_waypoint_following)
+# add_subdirectory(demos/03_object_tracking)    # Phase 3
+# add_subdirectory(demos/04_obstacle_avoidance) # Phase 4
