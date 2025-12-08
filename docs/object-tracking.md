@@ -1,14 +1,12 @@
-# Object Tracking
+# Object Tracking (Phase 3)
 
-## Demonstration: Object Tracking (Phase 3)
+## Demonstration: Object Tracking
 
 The Object Tracking demonstration introduces a **Perception Stack** abstraction and integrates it with the existing control loop. This phase is crucial for establishing how real-time, high-bandwidth sensor data (images) is processed and transformed into actionable, low-bandwidth information (object locations).
 
 ### 1. Key Components & Data Flow
 
 This system introduces the **Perception Node** and modifies the **Platform Controller** to act on perception-derived goals rather than predefined waypoints.
-
-
 
 1.  **Simulator Client (Publisher):** (Unchanged from Phase 1) Publishes raw camera images (`robot/drone/sensor/camera/rgb`).
 
@@ -81,7 +79,7 @@ add_library(autonomy_stack::perception STATIC
 # Link any necessary geometric libraries or future NN inference frameworks here
 ```
 
-#### `demonstrations/02_object_tracking/CMakeLists.txt`
+#### `demos/02_object_tracking/CMakeLists.txt`
 
 ```cmake
 # --- 3. Target Tracker Executable (Modified Controller) ---

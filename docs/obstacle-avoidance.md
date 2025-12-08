@@ -1,6 +1,6 @@
-# Obstacle avoidance
+# Obstacle avoidance (Phase 4)
 
-## Demonstration: Obstacle Avoidance (Phase 4)
+## Demonstration: Obstacle Avoidance
 
 The Obstacle Avoidance demonstration introduces **reactive safety** and **sensor fusion** into the Zenoh architecture. This phase focuses on processing immediate proximity data (e.g., Lidar, depth cameras) and overriding nominal path planning with high-priority safety commands.
 
@@ -89,7 +89,7 @@ add_library(control_algorithms::arbiter STATIC
 # Update other libraries with new dependencies if needed
 ```
 
-#### `demonstrations/03_obstacle_avoidance/CMakeLists.txt`
+#### `demos/03_obstacle_avoidance/CMakeLists.txt`
 
 ```cmake
 # --- 2. Command Arbiter Executable ---
