@@ -27,7 +27,7 @@ jobs:
             libopencv-dev
 
       - name: Install Rust
-        uses: dtolnay/rust-action@stable
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Cache Zenoh-C
         id: cache-zenohc
@@ -70,7 +70,7 @@ jobs:
           brew install cmake ninja opencv pkg-config
 
       - name: Install Rust
-        uses: dtolnay/rust-action@stable
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Cache Zenoh-C
         id: cache-zenohc
@@ -118,7 +118,7 @@ jobs:
           echo "OpenCV_DIR=C:\opencv\build\x64\vc16\lib" >> $env:GITHUB_ENV
 
       - name: Install Rust
-        uses: dtolnay/rust-action@stable
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Cache Zenoh-C
         id: cache-zenohc
