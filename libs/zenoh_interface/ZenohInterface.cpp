@@ -110,9 +110,9 @@ bool Session::publish(const std::string& key_expr, const std::vector<uint8_t>& p
         return false;
     }
 
-    // Create payload bytes
+    // Create payload bytes (copy data since we don't own the buffer)
     z_owned_bytes_t bytes;
-    z_bytes_from_buf(&bytes, payload.data(), payload.size(), nullptr, nullptr);
+    z_bytes_copy_from_buf(&bytes, payload.data(), payload.size());
 
     // Publish
     z_put_options_t options;
