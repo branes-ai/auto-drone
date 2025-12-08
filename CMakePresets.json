@@ -94,7 +94,8 @@
                 "strategy": "set"
             },
             "cacheVariables": {
-                "BUILD_TESTING": "ON"
+                "BUILD_TESTING": "ON",
+                "OpenCV_DIR": "C:/opencv/build/x64/vc16/lib"
             },
             "condition": {
                 "type": "equals",
@@ -113,7 +114,8 @@
                 "strategy": "set"
             },
             "cacheVariables": {
-                "BUILD_TESTING": "ON"
+                "BUILD_TESTING": "ON",
+                "OpenCV_DIR": "C:/opencv/build/x64/vc16/lib"
             },
             "condition": {
                 "type": "equals",
