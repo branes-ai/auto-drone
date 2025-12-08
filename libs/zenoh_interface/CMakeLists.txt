@@ -3,7 +3,7 @@
 # Define the zenoh_interface library
 add_library(zenoh_interface STATIC
     ZenohInterface.cpp
-    ZenohInterface.h
+    ZenohInterface.hpp
 )
 
 # Set public dependencies (any component linking to zenoh_interface needs these)
