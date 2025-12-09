@@ -70,12 +70,12 @@ add_subdirectory(libs/control_algorithms)
 # add_subdirectory(platforms/drone_platform)
 
 # --- Autonomy Stack ---
+add_subdirectory(autonomy_stack/object_tracking)
 # add_subdirectory(autonomy_stack/visual_slam)      # Phase 5
-# add_subdirectory(autonomy_stack/object_tracking)  # Phase 3
 # add_subdirectory(autonomy_stack/visual_nav)       # Phase 6
 
 # --- Demonstrations ---
 add_subdirectory(demos/01_sensor_streaming)
 add_subdirectory(demos/02_waypoint_following)
-# add_subdirectory(demos/03_object_tracking)    # Phase 3
+add_subdirectory(demos/03_object_tracking)
 # add_subdirectory(demos/04_obstacle_avoidance) # Phase 4

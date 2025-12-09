@@ -8,6 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Phase 3: Object Tracking**
+  - `libs/data_types` - ObjectDetection data type
+    - 2D bounding box and 3D world coordinates
+    - ObjectDetectionList for frame results with serialization
+  - `autonomy_stack/object_tracking` - Perception library
+    - `PerceptionEngine` for 2D-to-3D projection
+    - `ColorBlobDetector` for HSV color-based blob detection
+    - `perception_node` executable for processing camera images
+  - `libs/control_algorithms` - TargetTracker controller
+    - Visual servoing for image-based target tracking
+    - Distance maintenance with 3D tracking support
+  - `demos/03_object_tracking` - Object tracking demo
+    - `mock_target_publisher` - Generates images with moving red target
+    - `target_tracker_node` - Tracks detected objects with velocity commands
+
 - **Phase 2: Basic Autonomy**
   - `libs/control_algorithms` - PID control library
     - `PIDController` with anti-windup, derivative filtering, feedforward support
@@ -23,7 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `waypoint_manager` - PID-based waypoint controller
     - `waypoint_publisher` - Square/circle pattern generator for testing
 
-## [0.1.1] - 2024-12-08
+## [0.1.1] - 2025-12-08
 
 ### Added
 - **Phase 1: Communication Core**
@@ -40,7 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Renamed "Odom" labels to "Odometry" throughout codebase
 
-## [0.1.0] - 2024-12-01
+## [0.1.0] - 2025-12-01
 
 ### Added
 - Initial project skeleton with CMake presets for cross-platform builds

@@ -3,6 +3,8 @@
 add_library(control_algorithms STATIC
     PIDController.cpp
     PIDController.hpp
+    TargetTracker.cpp
+    TargetTracker.hpp
 )
 
 target_include_directories(control_algorithms PUBLIC
