@@ -65,7 +65,7 @@ add_subdirectory(libs/zenoh_interface)
 add_subdirectory(libs/control_algorithms)
 
 # --- Simulation/Platform Interfaces ---
-# add_subdirectory(sim_interfaces/airsim_client)  # After mock publisher works
+add_subdirectory(sim_interfaces/airsim_client)  # Requires AIRSIM_ROOT
 # add_subdirectory(sim_interfaces/isaac_client)
 # add_subdirectory(platforms/drone_platform)
 
