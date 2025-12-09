@@ -1,6 +1,6 @@
 # Session: Phase 2 - Waypoint Following
 
-**Date:** 2024-12-08
+**Date:** 2025-12-08
 **Focus:** PID control library, waypoint data types, waypoint following demo
 
 ## Goals

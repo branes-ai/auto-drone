@@ -9,6 +9,8 @@ add_library(data_types STATIC
     Waypoint.hpp
     VelocityCommand.cpp
     VelocityCommand.hpp
+    ObjectDetection.cpp
+    ObjectDetection.hpp
 )
 
 target_link_libraries(data_types PUBLIC
