@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **AirSim Integration**
+  - `sim_interfaces/airsim_client` - AirSim RPC client wrapper
+    - `AirSimClient` class for camera capture, odometry, velocity commands
+    - Support for local and remote AirSim instances
+    - `airsim_bridge` executable for Zenoh-AirSim bridging
+  - `docs/airsim-setup.md` - Cloud deployment guide
+    - AWS/Azure/GCP instance recommendations
+    - Headless rendering configuration
+    - Network and bandwidth considerations
+  - `scripts/install-airsim-linux.sh` - AirSim build helper
+
 - **Phase 3: Object Tracking**
   - `libs/data_types` - ObjectDetection data type
     - 2D bounding box and 3D world coordinates

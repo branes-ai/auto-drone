@@ -26,6 +26,7 @@ Each session log should include:
 
 | Date | Topic | Summary |
 |------|-------|---------|
-| 2024-12-08 | [Phase 3: Object Tracking](2024-12-08-phase3-object-tracking.md) | Perception pipeline, color detection, visual servoing |
-| 2024-12-08 | [Phase 2: Waypoint Following](2024-12-08-phase2-waypoint-following.md) | PID controllers, waypoint data types, waypoint following demo |
-| 2024-12-08 | [Phase 1: CI and Multi-Camera](2024-12-08-phase1-ci-multicamera.md) | GitHub Actions CI, webcam publisher, cross-platform fixes |
+| 2025-12-08 | [AirSim Integration](2025-12-08-airsim-integration.md) | AirSim client, cloud deployment, Zenoh bridge |
+| 2025-12-08 | [Phase 3: Object Tracking](2025-12-08-phase3-object-tracking.md) | Perception pipeline, color detection, visual servoing |
+| 2025-12-08 | [Phase 2: Waypoint Following](2025-12-08-phase2-waypoint-following.md) | PID controllers, waypoint data types, waypoint following demo |
+| 2025-12-08 | [Phase 1: CI and Multi-Camera](2025-12-08-phase1-ci-multicamera.md) | GitHub Actions CI, webcam publisher, cross-platform fixes |
