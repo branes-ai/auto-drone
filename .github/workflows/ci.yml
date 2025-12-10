@@ -118,29 +118,34 @@ jobs:
           echo "OpenCV_DIR=C:\opencv\build\x64\vc16\lib" >> $env:GITHUB_ENV
           echo "C:\opencv\build\x64\vc16\bin" >> $env:GITHUB_PATH
 
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
       - name: Cache Zenoh-C
         id: cache-zenohc
         uses: actions/cache@v4
         with:
           path: C:\zenohc
-          key: zenohc-windows-${{ env.ZENOH_VERSION }}
+          key: zenohc-windows-prebuilt-${{ env.ZENOH_VERSION }}
 
-      - name: Build and install Zenoh-C
+      - name: Download pre-built Zenoh-C
         if: steps.cache-zenohc.outputs.cache-hit != 'true'
         run: |
-          git clone --depth 1 --branch ${{ env.ZENOH_VERSION }} https://github.com/eclipse-zenoh/zenoh-c.git C:\zenoh-c-src
-          if ($LASTEXITCODE -ne 0) {
-            git clone --depth 1 https://github.com/eclipse-zenoh/zenoh-c.git C:\zenoh-c-src
-          }
-          cd C:\zenoh-c-src
-          mkdir build
-          cd build
-          cmake .. -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=C:\zenohc
-          cmake --build . --config Release --parallel
-          cmake --install . --config Release
+          # Download pre-built MSVC binary from Eclipse Foundation
+          $zenohUrl = "https://download.eclipse.org/zenoh/zenoh-c/${{ env.ZENOH_VERSION }}/zenoh-c-${{ env.ZENOH_VERSION }}-x86_64-pc-windows-msvc.zip"
+          Write-Host "Downloading Zenoh-C from: $zenohUrl"
+          Invoke-WebRequest -Uri $zenohUrl -OutFile zenoh-c.zip
+
+          # Extract to C:\zenohc
+          Expand-Archive -Path zenoh-c.zip -DestinationPath C:\zenohc-temp -Force
+
+          # Move contents up one level (archive contains zenoh-c-VERSION-xxx folder)
+          $extractedDir = Get-ChildItem -Path C:\zenohc-temp -Directory | Select-Object -First 1
+          Move-Item -Path "$($extractedDir.FullName)\*" -Destination C:\zenohc-temp -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Path C:\zenohc -Force
+          Move-Item -Path C:\zenohc-temp\* -Destination C:\zenohc -Force
+          Remove-Item -Path C:\zenohc-temp -Recurse -Force -ErrorAction SilentlyContinue
+
+          # List installed files for debugging
+          Write-Host "Zenoh-C installed to C:\zenohc:"
+          Get-ChildItem -Path C:\zenohc -Recurse | Select-Object FullName
 
       - name: Add Zenoh to PATH
         run: echo "C:\zenohc\bin" >> $env:GITHUB_PATH
