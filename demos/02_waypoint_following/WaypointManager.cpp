@@ -16,6 +16,7 @@
 #include <atomic>
 #include <mutex>
 #include <string>
+#include <memory>
 
 namespace {
 
@@ -35,6 +36,7 @@ bool g_waypoints_received = false;
 
 // Configuration
 struct Config {
+    std::string connect_endpoint; // Remote Zenoh endpoint to connect to
     float position_kp = 0.8f;
     float position_ki = 0.05f;
     float position_kd = 0.2f;
@@ -54,6 +56,7 @@ void parse_args(int argc, char* argv[], Config& config) {
         if ((arg == "--help" || arg == "-h")) {
             std::cout << "Usage: waypoint_manager [options]\n"
                       << "Options:\n"
+                      << "  --connect <ep>    Remote Zenoh endpoint (e.g., tcp/192.168.1.10:7447)\n"
                       << "  --pos-kp <val>    Position P gain (default: 0.8)\n"
                       << "  --pos-ki <val>    Position I gain (default: 0.05)\n"
                       << "  --pos-kd <val>    Position D gain (default: 0.2)\n"
@@ -64,7 +67,8 @@ void parse_args(int argc, char* argv[], Config& config) {
                       << std::endl;
             std::exit(0);
         }
-        if (arg == "--pos-kp" && i + 1 < argc) config.position_kp = std::stof(argv[++i]);
+        if (arg == "--connect" && i + 1 < argc) config.connect_endpoint = argv[++i];
+        else if (arg == "--pos-kp" && i + 1 < argc) config.position_kp = std::stof(argv[++i]);
         else if (arg == "--pos-ki" && i + 1 < argc) config.position_ki = std::stof(argv[++i]);
         else if (arg == "--pos-kd" && i + 1 < argc) config.position_kd = std::stof(argv[++i]);
         else if (arg == "--yaw-kp" && i + 1 < argc) config.yaw_kp = std::stof(argv[++i]);
@@ -95,7 +99,16 @@ int main(int argc, char* argv[]) {
     std::cout << std::endl;
 
     // Initialize Zenoh session
-    zenoh_interface::Session session;
+    std::unique_ptr<zenoh_interface::Session> session_ptr;
+    if (!config.connect_endpoint.empty()) {
+        std::cout << "Connecting to Zenoh at " << config.connect_endpoint << std::endl;
+        auto session_config = zenoh_interface::SessionConfig::connect_to(config.connect_endpoint);
+        session_ptr = std::make_unique<zenoh_interface::Session>(session_config);
+    } else {
+        std::cout << "Using local Zenoh scouting" << std::endl;
+        session_ptr = std::make_unique<zenoh_interface::Session>();
+    }
+    auto& session = *session_ptr;
     if (!session.is_valid()) {
         std::cerr << "Failed to create Zenoh session. Exiting." << std::endl;
         return 1;

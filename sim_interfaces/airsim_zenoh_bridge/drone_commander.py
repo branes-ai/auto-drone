@@ -138,19 +138,77 @@ class DroneCommander:
         pos = self.get_position()
         print(f"\nSquare complete. Final position: ({pos[0]:.1f}, {pos[1]:.1f}, {pos[2]:.1f})")
 
-    def run_mission_circle(self, radius: float = 3.0, duration: float = 10.0):
-        """Fly a circular pattern using forward velocity + yaw rate."""
-        # For a circle: forward_velocity = radius * yaw_rate
-        # Full circle in 'duration' seconds means yaw_rate = 2*pi / duration
+    def run_mission_circle(self, radius: float = 5.0, duration: float = 20.0):
+        """Fly a circular pattern by continuously updating velocity direction.
+
+        Since move_by_velocity uses world frame (NED), we need to compute
+        the tangential velocity direction based on current position relative
+        to circle center.
+        """
         import math
-        yaw_rate = 2 * math.pi / duration
-        forward_velocity = radius * yaw_rate
+
+        # Wait for odometry to arrive
+        time.sleep(0.5)
+
+        # Get starting position - this will be on the circle
+        start_pos = self.get_position()
+        if start_pos == (0, 0, 0):
+            print("  Warning: No odometry received yet, waiting...")
+            time.sleep(1.0)
+            start_pos = self.get_position()
+        # Circle center is 'radius' meters to the right (east) of start
+        center_x = start_pos[0]
+        center_y = start_pos[1] + radius
+
+        # Angular velocity for full circle in 'duration' seconds
+        omega = 2 * math.pi / duration  # rad/s
+        speed = radius * omega  # tangential speed
 
         print(f"\nFlying circle: radius={radius}m, duration={duration}s")
-        print(f"  Forward velocity: {forward_velocity:.2f} m/s")
-        print(f"  Yaw rate: {yaw_rate:.2f} rad/s ({math.degrees(yaw_rate):.1f} deg/s)\n")
+        print(f"  Center: ({center_x:.1f}, {center_y:.1f})")
+        print(f"  Speed: {speed:.2f} m/s")
+        print(f"  Angular rate: {math.degrees(omega):.1f} deg/s\n")
 
-        self.move_for_duration(forward_velocity, 0, 0, yaw_rate, duration)
+        rate = 20.0  # Command rate Hz
+        period = 1.0 / rate
+        start_time = time.time()
+
+        while self.running and (time.time() - start_time) < duration:
+            # Get current position
+            pos = self.get_position()
+
+            # Vector from center to current position
+            dx = pos[0] - center_x
+            dy = pos[1] - center_y
+
+            # Distance from center
+            dist = math.sqrt(dx*dx + dy*dy)
+            if dist < 0.1:
+                dist = 0.1  # Avoid division by zero
+
+            # Normalize to get radial direction
+            rx = dx / dist
+            ry = dy / dist
+
+            # Tangential direction (perpendicular to radial, counterclockwise)
+            # For counterclockwise: tangent = (-ry, rx)
+            tx = -ry
+            ty = rx
+
+            # Velocity command: tangential velocity + correction toward circle
+            # Add radial correction to maintain radius
+            correction = 0.5 * (radius - dist)  # P-controller for radius
+
+            vx = speed * tx + correction * rx
+            vy = speed * ty + correction * ry
+
+            # Also command yaw to face tangent direction
+            target_yaw = math.atan2(ty, tx)
+
+            self.send_velocity(vx, vy, 0, 0)
+            time.sleep(period)
+
+        self.hover()
 
         pos = self.get_position()
         print(f"\nCircle complete. Final position: ({pos[0]:.1f}, {pos[1]:.1f}, {pos[2]:.1f})")
