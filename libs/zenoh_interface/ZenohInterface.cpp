@@ -35,9 +35,52 @@ static void sample_handler(z_loaned_sample_t* sample, void* arg) {
     ctx->callback(key, payload);
 }
 
-Session::Session() {
+Session::Session() : Session(SessionConfig::local()) {
+}
+
+Session::Session(const SessionConfig& cfg) {
     z_owned_config_t config;
     z_config_default(&config);
+
+    // Configure connect endpoints
+    if (!cfg.connect_endpoints.empty()) {
+        std::string json = "[";
+        for (size_t i = 0; i < cfg.connect_endpoints.size(); ++i) {
+            if (i > 0) json += ",";
+            json += "\"" + cfg.connect_endpoints[i] + "\"";
+        }
+        json += "]";
+
+        if (zc_config_insert_json5(z_loan_mut(config), Z_CONFIG_CONNECT_KEY, json.c_str()) < 0) {
+            std::cerr << "Failed to set connect endpoints: " << json << std::endl;
+        } else {
+            std::cout << "Zenoh connect endpoints: " << json << std::endl;
+        }
+    }
+
+    // Configure listen endpoints
+    if (!cfg.listen_endpoints.empty()) {
+        std::string json = "[";
+        for (size_t i = 0; i < cfg.listen_endpoints.size(); ++i) {
+            if (i > 0) json += ",";
+            json += "\"" + cfg.listen_endpoints[i] + "\"";
+        }
+        json += "]";
+
+        if (zc_config_insert_json5(z_loan_mut(config), Z_CONFIG_LISTEN_KEY, json.c_str()) < 0) {
+            std::cerr << "Failed to set listen endpoints: " << json << std::endl;
+        } else {
+            std::cout << "Zenoh listen endpoints: " << json << std::endl;
+        }
+    }
+
+    // Configure mode
+    if (!cfg.mode.empty()) {
+        std::string mode_json = "\"" + cfg.mode + "\"";
+        if (zc_config_insert_json5(z_loan_mut(config), Z_CONFIG_MODE_KEY, mode_json.c_str()) < 0) {
+            std::cerr << "Failed to set mode: " << cfg.mode << std::endl;
+        }
+    }
 
     if (z_open(&session_, z_move(config), nullptr) < 0) {
         std::cerr << "Error opening Zenoh session." << std::endl;

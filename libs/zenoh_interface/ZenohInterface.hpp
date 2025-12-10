@@ -14,10 +14,37 @@ using ZenohCallback = std::function<void(const std::string& key, const std::vect
 // Forward declaration for subscriber context
 struct SubscriberContext;
 
+// Configuration for Zenoh session
+struct SessionConfig {
+    // Remote endpoints to connect to (e.g., "tcp/192.168.1.10:7447")
+    std::vector<std::string> connect_endpoints;
+
+    // Local endpoints to listen on (e.g., "tcp/0.0.0.0:7447")
+    std::vector<std::string> listen_endpoints;
+
+    // Scouting mode: "peer", "router", or "none"
+    std::string mode = "peer";
+
+    // Default configuration (local scouting)
+    static SessionConfig local() { return SessionConfig{}; }
+
+    // Connect to a remote endpoint
+    static SessionConfig connect_to(const std::string& endpoint) {
+        SessionConfig cfg;
+        cfg.connect_endpoints.push_back(endpoint);
+        return cfg;
+    }
+};
+
 // RAII wrapper for Zenoh session
 class Session {
 public:
+    // Default constructor - uses local scouting
     Session();
+
+    // Constructor with configuration
+    explicit Session(const SessionConfig& config);
+
     ~Session();
 
     // Non-copyable
