@@ -170,26 +170,35 @@ class AirSimZenohBridge:
         # Callback for depth camera
         def on_depth_image(topic, image_data):
             try:
-                # Same format as RGB but single channel or float
+                # Same format as RGB but different pixel format
                 if isinstance(image_data, dict) and 'data' in image_data:
                     height = image_data.get('height', 0)
                     width = image_data.get('width', 0)
                     raw_data = image_data.get('data', b'')
 
                     if height > 0 and width > 0 and raw_data:
-                        # Depth might be float32 or uint8
-                        # Try float32 first (4 bytes per pixel)
-                        expected_float_size = height * width * 4
-                        if len(raw_data) == expected_float_size:
+                        pixel_count = height * width
+                        data_size = len(raw_data)
+
+                        # Determine depth format based on data size
+                        if data_size == pixel_count * 4:
+                            # float32 (4 bytes per pixel)
                             img = np.frombuffer(raw_data, dtype=np.float32).reshape(height, width)
+                        elif data_size == pixel_count * 2:
+                            # uint16 (2 bytes per pixel) - convert to float for normalization
+                            img = np.frombuffer(raw_data, dtype=np.uint16).reshape(height, width).astype(np.float32)
+                        elif data_size == pixel_count:
+                            # uint8 (1 byte per pixel)
+                            img = np.frombuffer(raw_data, dtype=np.uint8).reshape(height, width).astype(np.float32)
                         else:
-                            img = np.frombuffer(raw_data, dtype=np.uint8).reshape(height, width)
+                            # Unknown format - skip
+                            return
 
                         with self.depth_lock:
                             self.latest_depth = img
             except Exception as e:
                 if self.stats['depth_frames'] == 0:
-                    print(f"  Error parsing depth: {e}")
+                    print(f"  Error parsing depth: {e} (size={len(raw_data)}, expected={height}x{width})")
 
         # Callback for pose/odometry (from robot_info or IMU)
         def on_pose(topic, pose_data):
