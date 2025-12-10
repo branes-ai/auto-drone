@@ -93,11 +93,13 @@ class AirSimZenohBridge:
         self.topic_odom = f"robot/{config.robot_id}/sensor/state/odom"
         self.topic_cmd_vel = f"robot/{config.robot_id}/cmd/velocity"
 
-        # Camera subscriptions (will store received images)
+        # Sensor data from subscriptions
         self.latest_rgb = None
         self.latest_depth = None
+        self.latest_odom = None
         self.rgb_lock = threading.Lock()
         self.depth_lock = threading.Lock()
+        self.odom_lock = threading.Lock()
 
     async def connect_airsim(self) -> bool:
         """Connect to Project AirSim."""
@@ -128,8 +130,8 @@ class AirSimZenohBridge:
                 await takeoff_task
                 print("Takeoff complete")
 
-            # Subscribe to camera feeds using Project AirSim's subscription mechanism
-            self._setup_camera_subscriptions()
+            # Subscribe to sensor feeds using Project AirSim's subscription mechanism
+            self._setup_sensor_subscriptions()
 
             return True
 
@@ -139,23 +141,78 @@ class AirSimZenohBridge:
             traceback.print_exc()
             return False
 
-    def _setup_camera_subscriptions(self):
-        """Set up subscriptions to camera feeds from Project AirSim."""
-        # Subscribe to RGB camera
+    def _setup_sensor_subscriptions(self):
+        """Set up subscriptions to sensor feeds from Project AirSim."""
+
+        # Callback for RGB camera
         def on_rgb_image(topic, image_data):
             with self.rgb_lock:
                 self.latest_rgb = image_data
 
+        # Callback for depth camera
         def on_depth_image(topic, image_data):
             with self.depth_lock:
                 self.latest_depth = image_data
 
-        try:
-            # Project AirSim uses drone.sensors dict for camera topics
-            # Common sensor names: "DownCamera", "FrontCamera", "Chase"
-            # Each has "scene_camera" (RGB) and "depth_camera" sub-sensors
+        # Callback for pose/odometry (from robot_info or IMU)
+        def on_pose(topic, pose_data):
+            try:
+                # Parse pose data - format depends on Project AirSim
+                # Typically has position (x, y, z) and orientation (quaternion or euler)
+                if hasattr(pose_data, 'position') and hasattr(pose_data, 'orientation'):
+                    pos = pose_data.position
+                    ori = pose_data.orientation
 
-            # Try to find available cameras
+                    x = getattr(pos, 'x_val', getattr(pos, 'x', 0))
+                    y = getattr(pos, 'y_val', getattr(pos, 'y', 0))
+                    z = getattr(pos, 'z_val', getattr(pos, 'z', 0))
+
+                    # Convert quaternion to euler if needed
+                    if hasattr(ori, 'w_val') or hasattr(ori, 'w'):
+                        w = getattr(ori, 'w_val', getattr(ori, 'w', 1))
+                        qx = getattr(ori, 'x_val', getattr(ori, 'x', 0))
+                        qy = getattr(ori, 'y_val', getattr(ori, 'y', 0))
+                        qz = getattr(ori, 'z_val', getattr(ori, 'z', 0))
+                        roll, pitch, yaw = self._quaternion_to_euler(w, qx, qy, qz)
+                    else:
+                        roll = getattr(ori, 'roll', 0)
+                        pitch = getattr(ori, 'pitch', 0)
+                        yaw = getattr(ori, 'yaw', 0)
+
+                    odom = Odometry(
+                        x=x, y=y, z=z,
+                        roll=roll, pitch=pitch, yaw=yaw,
+                        timestamp_us=self._get_timestamp_us()
+                    )
+                    with self.odom_lock:
+                        self.latest_odom = odom
+                else:
+                    # Try to extract from dict-like structure
+                    if isinstance(pose_data, dict):
+                        x = pose_data.get('x', 0)
+                        y = pose_data.get('y', 0)
+                        z = pose_data.get('z', 0)
+                        roll = pose_data.get('roll', 0)
+                        pitch = pose_data.get('pitch', 0)
+                        yaw = pose_data.get('yaw', 0)
+
+                        odom = Odometry(
+                            x=x, y=y, z=z,
+                            roll=roll, pitch=pitch, yaw=yaw,
+                            timestamp_us=self._get_timestamp_us()
+                        )
+                        with self.odom_lock:
+                            self.latest_odom = odom
+
+            except Exception as e:
+                if self.stats['odom_messages'] == 0:
+                    print(f"  Error parsing pose: {e} - data type: {type(pose_data)}")
+
+        try:
+            # Project AirSim uses drone.sensors and drone.robot_info for topics
+            print(f"  Setting up sensor subscriptions...")
+
+            # Subscribe to cameras
             if hasattr(self.drone, 'sensors'):
                 print(f"  Available sensors: {list(self.drone.sensors.keys())}")
 
@@ -180,11 +237,18 @@ class AirSimZenohBridge:
                         print(f"    Subscribed to FrontCamera Depth")
                 else:
                     print("  Warning: No recognized camera found in sensors")
+
+            # Subscribe to pose/odometry via robot_info
+            if hasattr(self.drone, 'robot_info'):
+                print(f"  Available robot_info: {list(self.drone.robot_info.keys())}")
+                if "actual_pose" in self.drone.robot_info:
+                    self.client.subscribe(self.drone.robot_info["actual_pose"], on_pose)
+                    print(f"    Subscribed to actual_pose for odometry")
             else:
-                print("  Warning: drone.sensors not available")
+                print("  Warning: drone.robot_info not available")
 
         except Exception as e:
-            print(f"  Warning: Could not subscribe to cameras: {e}")
+            print(f"  Warning: Could not set up subscriptions: {e}")
             import traceback
             traceback.print_exc()
 
@@ -268,47 +332,13 @@ class AirSimZenohBridge:
 
     def _publish_odometry(self):
         """Read and publish odometry from AirSim."""
-        try:
-            # Get pose from AirSim - try different API methods
-            try:
-                pose = self.drone.get_pose()
-            except AttributeError:
-                # Alternative: might be get_state() or similar
-                state = self.drone.get_state()
-                pose = state.kinematics_estimated.pose if hasattr(state, 'kinematics_estimated') else state.pose
-
-            # Extract position - handle different attribute naming conventions
-            if hasattr(pose, 'position'):
-                pos = pose.position
-                x = getattr(pos, 'x_val', getattr(pos, 'x', 0))
-                y = getattr(pos, 'y_val', getattr(pos, 'y', 0))
-                z = getattr(pos, 'z_val', getattr(pos, 'z', 0))
-            else:
-                x, y, z = 0, 0, 0
-
-            # Convert quaternion to Euler
-            if hasattr(pose, 'orientation'):
-                q = pose.orientation
-                w = getattr(q, 'w_val', getattr(q, 'w', 1))
-                qx = getattr(q, 'x_val', getattr(q, 'x', 0))
-                qy = getattr(q, 'y_val', getattr(q, 'y', 0))
-                qz = getattr(q, 'z_val', getattr(q, 'z', 0))
-                roll, pitch, yaw = self._quaternion_to_euler(w, qx, qy, qz)
-            else:
-                roll, pitch, yaw = 0, 0, 0
-
-            odom = Odometry(
-                x=x, y=y, z=z,
-                roll=roll, pitch=pitch, yaw=yaw,
-                timestamp_us=self._get_timestamp_us()
-            )
-
-            self.pub_odom.put(odom.serialize())
-            self.stats['odom_messages'] += 1
-
-        except Exception as e:
-            if self.stats['odom_messages'] == 0:
-                print(f"Error publishing odometry: {e}")
+        # Odometry is published via subscription callback, not polling
+        # Just check if we have data from the subscription
+        with self.odom_lock:
+            if self.latest_odom is not None:
+                self.pub_odom.put(self.latest_odom.serialize())
+                self.stats['odom_messages'] += 1
+                self.latest_odom = None
 
     def _publish_rgb(self):
         """Publish RGB image to Zenoh."""
