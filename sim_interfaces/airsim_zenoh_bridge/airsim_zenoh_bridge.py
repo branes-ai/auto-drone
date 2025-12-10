@@ -44,7 +44,7 @@ class BridgeConfig:
 
     # AirSim configuration
     drone_name: str = "Drone1"
-    scene_file: Optional[str] = None  # If None, uses already-loaded scene
+    scene_file: str = "scene_basic_drone.jsonc"  # Scene file to load
 
     # Sensor rates (Hz)
     rgb_rate: float = 30.0
@@ -108,40 +108,14 @@ class AirSimZenohBridge:
             self.client.connect()
             print("  Client connected")
 
-            # Create world - if scene_file provided, load it
-            if self.config.scene_file:
-                print(f"  Loading scene: {self.config.scene_file}")
-                self.world = World(self.client, self.config.scene_file, delay_after_load_sec=2)
-            else:
-                # No scene file - assume scene is already loaded
-                # World might not be needed for basic drone operations
-                self.world = None
-                print("  Using existing scene (no scene file specified)")
+            # Load scene - this is required by Project AirSim
+            print(f"  Loading scene: {self.config.scene_file}")
+            self.world = World(self.client, self.config.scene_file, delay_after_load_sec=2)
+            print("  Scene loaded")
 
-            # Get drone - signature is Drone(client, world, name)
-            # If no world, we need to create one or get a reference
+            # Create drone
             print(f"  Getting drone: {self.config.drone_name}")
-            if self.world is None:
-                # Create a minimal World object for the existing scene
-                # Try different approaches
-                try:
-                    # Option 1: World might work with just client for existing scene
-                    self.world = World(self.client)
-                except Exception as e1:
-                    print(f"  Note: Could not create World object: {e1}")
-                    # Option 2: Try with empty/None scene to reference current
-                    try:
-                        self.world = World(self.client, None)
-                    except Exception as e2:
-                        print(f"  Note: World(client, None) also failed: {e2}")
-                        self.world = None
-
-            # Now create drone with (client, world, name) signature
-            if self.world:
-                self.drone = Drone(self.client, self.world, self.config.drone_name)
-            else:
-                # Last resort: try Drone(client, None, name)
-                self.drone = Drone(self.client, None, self.config.drone_name)
+            self.drone = Drone(self.client, self.world, self.config.drone_name)
 
             # Enable API control
             self.drone.enable_api_control()
@@ -168,29 +142,51 @@ class AirSimZenohBridge:
     def _setup_camera_subscriptions(self):
         """Set up subscriptions to camera feeds from Project AirSim."""
         # Subscribe to RGB camera
-        def on_rgb_image(image_data):
+        def on_rgb_image(topic, image_data):
             with self.rgb_lock:
                 self.latest_rgb = image_data
 
-        def on_depth_image(image_data):
+        def on_depth_image(topic, image_data):
             with self.depth_lock:
                 self.latest_depth = image_data
 
         try:
-            # Project AirSim uses client.subscribe() for camera data
-            # The exact API may vary - adjust based on actual API
-            self.client.subscribe(
-                f"/{self.config.drone_name}/camera/rgb",
-                on_rgb_image
-            )
-            self.client.subscribe(
-                f"/{self.config.drone_name}/camera/depth",
-                on_depth_image
-            )
-            print("  Subscribed to camera feeds")
+            # Project AirSim uses drone.sensors dict for camera topics
+            # Common sensor names: "DownCamera", "FrontCamera", "Chase"
+            # Each has "scene_camera" (RGB) and "depth_camera" sub-sensors
+
+            # Try to find available cameras
+            if hasattr(self.drone, 'sensors'):
+                print(f"  Available sensors: {list(self.drone.sensors.keys())}")
+
+                # Try DownCamera first (used in hello_drone.py example)
+                if "DownCamera" in self.drone.sensors:
+                    cam = self.drone.sensors["DownCamera"]
+                    if "scene_camera" in cam:
+                        self.client.subscribe(cam["scene_camera"], on_rgb_image)
+                        print(f"    Subscribed to DownCamera RGB")
+                    if "depth_camera" in cam:
+                        self.client.subscribe(cam["depth_camera"], on_depth_image)
+                        print(f"    Subscribed to DownCamera Depth")
+
+                # Also try FrontCamera if available
+                elif "FrontCamera" in self.drone.sensors:
+                    cam = self.drone.sensors["FrontCamera"]
+                    if "scene_camera" in cam:
+                        self.client.subscribe(cam["scene_camera"], on_rgb_image)
+                        print(f"    Subscribed to FrontCamera RGB")
+                    if "depth_camera" in cam:
+                        self.client.subscribe(cam["depth_camera"], on_depth_image)
+                        print(f"    Subscribed to FrontCamera Depth")
+                else:
+                    print("  Warning: No recognized camera found in sensors")
+            else:
+                print("  Warning: drone.sensors not available")
+
         except Exception as e:
-            print(f"  Warning: Could not subscribe to cameras via subscription API: {e}")
-            print("  Will use polling for images instead")
+            print(f"  Warning: Could not subscribe to cameras: {e}")
+            import traceback
+            traceback.print_exc()
 
     def connect_zenoh(self) -> bool:
         """Initialize Zenoh session."""
