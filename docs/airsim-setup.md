@@ -8,8 +8,8 @@ This guide describes how to set up **Project AirSim (IAMAI)** on a cloud GPU ins
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                           CLOUD GPU INSTANCE                                │
-│                    (AWS g4dn / Azure NC / GCP N1+T4)                        │
+│                         REMOTE/CLOUD GPU INSTANCE                           │
+│     GPU Workstation or Cloud Instance (AWS g4dn / Azure NC / GCP N1+T4)     │
 │                                                                             │
 │  ┌───────────────────────────────────────────────────────────────────────┐  │
 │  │              Unreal Engine 5 + Project AirSim Plugin                  │  │
@@ -33,7 +33,7 @@ This guide describes how to set up **Project AirSim (IAMAI)** on a cloud GPU ins
 ┌──────────────────────────────────┼──────────────────────────────────────────┐
 │                                  │                                          │
 │                        LOCAL DEVELOPMENT MACHINE                            │
-│                                                                             │
+│                                  |                                          │
 │  ┌───────────────────────────────┴───────────────────────────────────────┐  │
 │  │                        airsim_client                                  │  │
 │  │                                                                       │  │
@@ -52,7 +52,7 @@ This guide describes how to set up **Project AirSim (IAMAI)** on a cloud GPU ins
 │                                  │ Zenoh (local)                            │
 │                                  ▼                                          │
 │  ┌───────────────────────────────────────────────────────────────────────┐  │
-│  │                      Autonomy Stack                                   │  │
+│  │                         Autonomy Stack                                │  │
 │  │                                                                       │  │
 │  │   ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  │  │
 │  │   │  viewer     │  │  perception │  │  waypoint   │  │  target     │  │  │

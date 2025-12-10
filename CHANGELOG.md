@@ -8,6 +8,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Python Zenoh Bridge for Project AirSim**
+  - `sim_interfaces/airsim_zenoh_bridge/` - Python bridge for remote AirSim connectivity
+    - `airsim_zenoh_bridge.py` - Main bridge connecting Project AirSim to Zenoh network
+    - `data_types.py` - Binary serialization matching C++ formats (ImageData, Odometry, VelocityCommand)
+    - `test_bridge.py` - Python test client for verifying bridge connectivity
+    - `test_bridge_cpp.cpp` - C++ test client for Linux-side verification
+  - Enables cross-machine communication: Windows (AirSim) ↔ Linux (Autonomy Stack)
+  - Workaround for Project AirSim's localhost-only Python API limitation
+
+- **Remote Zenoh Endpoint Configuration**
+  - `SessionConfig` struct in `libs/zenoh_interface/ZenohInterface.hpp`
+    - `connect_endpoints` - Remote endpoints to connect to (e.g., "tcp/192.168.1.10:7447")
+    - `listen_endpoints` - Local endpoints to listen on
+    - Static helpers: `SessionConfig::local()`, `SessionConfig::connect_to(endpoint)`
+  - Backward compatible - default constructor uses local scouting
+
 - **AirSim Integration**
   - `sim_interfaces/airsim_client` - AirSim RPC client wrapper
     - `AirSimClient` class for camera capture, odometry, velocity commands
