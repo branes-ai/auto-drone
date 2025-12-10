@@ -118,20 +118,30 @@ class AirSimZenohBridge:
                 self.world = None
                 print("  Using existing scene (no scene file specified)")
 
-            # Get drone - try with and without world parameter
+            # Get drone - signature is Drone(client, world, name)
+            # If no world, we need to create one or get a reference
             print(f"  Getting drone: {self.config.drone_name}")
-            try:
-                if self.world:
-                    self.drone = Drone(self.client, self.world, self.config.drone_name)
-                else:
-                    # Try direct drone connection without world
-                    self.drone = Drone(self.client, self.config.drone_name)
-            except TypeError:
-                # API might have different signature - try alternatives
+            if self.world is None:
+                # Create a minimal World object for the existing scene
+                # Try different approaches
                 try:
-                    self.drone = Drone(self.client, self.config.drone_name)
-                except TypeError:
-                    self.drone = Drone(self.client, drone_name=self.config.drone_name)
+                    # Option 1: World might work with just client for existing scene
+                    self.world = World(self.client)
+                except Exception as e1:
+                    print(f"  Note: Could not create World object: {e1}")
+                    # Option 2: Try with empty/None scene to reference current
+                    try:
+                        self.world = World(self.client, None)
+                    except Exception as e2:
+                        print(f"  Note: World(client, None) also failed: {e2}")
+                        self.world = None
+
+            # Now create drone with (client, world, name) signature
+            if self.world:
+                self.drone = Drone(self.client, self.world, self.config.drone_name)
+            else:
+                # Last resort: try Drone(client, None, name)
+                self.drone = Drone(self.client, None, self.config.drone_name)
 
             # Enable API control
             self.drone.enable_api_control()
