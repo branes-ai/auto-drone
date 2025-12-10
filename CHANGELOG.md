@@ -46,7 +46,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Windows CI Zenoh Test Segfaults**
   - Tests were crashing with SIGSEGV during Zenoh session initialization
-  - Root cause: Zenoh DLL not in PATH when ctest runs executables
+  - Root cause: Building Zenoh-C from source with Visual Studio caused ABI issues
+  - Solution: Use pre-built MSVC binaries from Eclipse Foundation instead
   - Added `environment` settings to Windows test presets in CMakePresets.json
   - Added explicit PATH setup in CI workflow test step
 
