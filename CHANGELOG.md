@@ -8,6 +8,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Waypoint Demo Integration with AirSim Bridge**
+  - Added `--connect <endpoint>` option to `waypoint_manager` and `waypoint_publisher`
+  - Enables remote Zenoh connections (e.g., `--connect tcp/192.168.1.10:7447`)
+  - Successfully tested full waypoint following loop through AirSim bridge
+
+- **Drone Commander Tool**
+  - `sim_interfaces/airsim_zenoh_bridge/drone_commander.py`
+  - Interactive keyboard control (WASD for movement, Q/E for yaw, R/F for altitude)
+  - Predefined missions: square, circle, updown
+  - Single command mode for scripted operations
+
+- **Mock Bridge for Local Testing**
+  - `sim_interfaces/airsim_zenoh_bridge/mock_bridge.py`
+  - Simulates AirSim sensor data without actual simulator
+  - Useful for testing Zenoh connectivity and serialization on Linux
+
+- **High-Speed Drone Configurations**
+  - `robot_quadrotor_highspeed_10ms.jsonc` - 10 m/s (36 km/h)
+  - `robot_quadrotor_highspeed_20ms.jsonc` - 20 m/s (72 km/h)
+  - `robot_quadrotor_highspeed_30ms.jsonc` - 30 m/s (109 km/h)
+  - Corresponding scene files for each configuration
+  - Tuned physics: reduced drag coefficient, increased thrust/RPM
+
+### Fixed
+- **AirSim Bridge Odometry Parsing**
+  - Project AirSim pose data is a dict, not an object with attributes
+  - Now correctly parses `pose_data.get('position', {}).get('x', 0)`
+
+- **AirSim Bridge Depth Image Parsing**
+  - Depth images use uint16 format (2 bytes/pixel), not float32
+  - Added format detection based on data size
+
+- **Circle Mission in Drone Commander**
+  - World-frame velocity doesn't curve with yaw rate
+  - Fixed to compute tangential velocity from position relative to circle center
+
 - **Python Zenoh Bridge for Project AirSim**
   - `sim_interfaces/airsim_zenoh_bridge/` - Python bridge for remote AirSim connectivity
     - `airsim_zenoh_bridge.py` - Main bridge connecting Project AirSim to Zenoh network
