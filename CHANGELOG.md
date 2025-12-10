@@ -46,10 +46,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Windows CI Zenoh Test Segfaults**
   - Tests were crashing with SIGSEGV during Zenoh session initialization
-  - Root cause: Building Zenoh-C from source with Visual Studio caused ABI issues
-  - Solution: Use pre-built MSVC binaries from Eclipse Foundation instead
-  - Added `environment` settings to Windows test presets in CMakePresets.json
-  - Added explicit PATH setup in CI workflow test step
+  - Root cause: New `SessionConfig` code was setting `mode = "peer"` by default
+  - The `zc_config_insert_json5(Z_CONFIG_MODE_KEY)` call caused issues on Windows CI
+  - Solution: Changed default `SessionConfig::mode` to empty string (use Zenoh defaults)
+  - Default sessions now skip mode configuration, matching previous working behavior
 
 - **Python Zenoh Bridge for Project AirSim**
   - `sim_interfaces/airsim_zenoh_bridge/` - Python bridge for remote AirSim connectivity
