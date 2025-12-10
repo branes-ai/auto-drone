@@ -22,10 +22,10 @@ struct SessionConfig {
     // Local endpoints to listen on (e.g., "tcp/0.0.0.0:7447")
     std::vector<std::string> listen_endpoints;
 
-    // Scouting mode: "peer", "router", or "none"
-    std::string mode = "peer";
+    // Scouting mode: "peer", "router", or "none" (empty = use Zenoh default)
+    std::string mode;
 
-    // Default configuration (local scouting)
+    // Default configuration (local scouting with Zenoh defaults)
     static SessionConfig local() { return SessionConfig{}; }
 
     // Connect to a remote endpoint
