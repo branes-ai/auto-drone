@@ -2,7 +2,7 @@
 
 The current Project AirSim only has a python client, so we need to create a bridge that can translate our Zenoh messages into AirSim messages.
 
-
+```verbatim
   [Workstation A - Windows]                      [Workstation B - Linux]
   ┌─────────────────────────────────────┐        ┌─────────────────────────────────┐
   │  Project AirSim                     │        │  Autonomy Stack                 │
@@ -14,6 +14,7 @@ The current Project AirSim only has a python client, so we need to create a brid
   │       ↕                             │        │       ↕                         │
   │  [Zenoh Network Transport]  ←───────────────→│  [Zenoh Subscriber/Publisher]   │
   └─────────────────────────────────────┘        └─────────────────────────────────┘
+```
 
   On Workstation A (Windows): Python service that:
   - Connects to Project AirSim via localhost (using projectairsim Python client)
