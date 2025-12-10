@@ -157,27 +157,23 @@ class AirSimZenohBridge:
         # Callback for pose/odometry (from robot_info or IMU)
         def on_pose(topic, pose_data):
             try:
-                # Parse pose data - format depends on Project AirSim
-                # Typically has position (x, y, z) and orientation (quaternion or euler)
-                if hasattr(pose_data, 'position') and hasattr(pose_data, 'orientation'):
-                    pos = pose_data.position
-                    ori = pose_data.orientation
+                # Project AirSim sends pose as a dict:
+                # {'time_stamp': ..., 'position': {'x': ..., 'y': ..., 'z': ...},
+                #  'orientation': {'w': ..., 'x': ..., 'y': ..., 'z': ...}}
+                if isinstance(pose_data, dict):
+                    pos = pose_data.get('position', {})
+                    ori = pose_data.get('orientation', {})
 
-                    x = getattr(pos, 'x_val', getattr(pos, 'x', 0))
-                    y = getattr(pos, 'y_val', getattr(pos, 'y', 0))
-                    z = getattr(pos, 'z_val', getattr(pos, 'z', 0))
+                    x = pos.get('x', 0)
+                    y = pos.get('y', 0)
+                    z = pos.get('z', 0)
 
-                    # Convert quaternion to euler if needed
-                    if hasattr(ori, 'w_val') or hasattr(ori, 'w'):
-                        w = getattr(ori, 'w_val', getattr(ori, 'w', 1))
-                        qx = getattr(ori, 'x_val', getattr(ori, 'x', 0))
-                        qy = getattr(ori, 'y_val', getattr(ori, 'y', 0))
-                        qz = getattr(ori, 'z_val', getattr(ori, 'z', 0))
-                        roll, pitch, yaw = self._quaternion_to_euler(w, qx, qy, qz)
-                    else:
-                        roll = getattr(ori, 'roll', 0)
-                        pitch = getattr(ori, 'pitch', 0)
-                        yaw = getattr(ori, 'yaw', 0)
+                    # Convert quaternion to euler
+                    w = ori.get('w', 1)
+                    qx = ori.get('x', 0)
+                    qy = ori.get('y', 0)
+                    qz = ori.get('z', 0)
+                    roll, pitch, yaw = self._quaternion_to_euler(w, qx, qy, qz)
 
                     odom = Odometry(
                         x=x, y=y, z=z,
@@ -186,23 +182,6 @@ class AirSimZenohBridge:
                     )
                     with self.odom_lock:
                         self.latest_odom = odom
-                else:
-                    # Try to extract from dict-like structure
-                    if isinstance(pose_data, dict):
-                        x = pose_data.get('x', 0)
-                        y = pose_data.get('y', 0)
-                        z = pose_data.get('z', 0)
-                        roll = pose_data.get('roll', 0)
-                        pitch = pose_data.get('pitch', 0)
-                        yaw = pose_data.get('yaw', 0)
-
-                        odom = Odometry(
-                            x=x, y=y, z=z,
-                            roll=roll, pitch=pitch, yaw=yaw,
-                            timestamp_us=self._get_timestamp_us()
-                        )
-                        with self.odom_lock:
-                            self.latest_odom = odom
 
             except Exception as e:
                 if self.stats['odom_messages'] == 0:
