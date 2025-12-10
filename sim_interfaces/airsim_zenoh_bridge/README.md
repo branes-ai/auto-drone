@@ -1,4 +1,4 @@
-# Project AirSim Zenoh Bridge
+# Zenoh Bridge between Project AirSim and Branes Autodrone
 
 Python bridge that connects Project AirSim to a Zenoh network, enabling remote autonomy stacks to receive sensor data and send control commands.
 
@@ -18,7 +18,21 @@ Python bridge that connects Project AirSim to a Zenoh network, enabling remote a
 ## Requirements
 
 - Python 3.9 (Project AirSim requirement)
+
+```bash
+# On Project AirSim host, in the root of the clone/fork of auto-drone repository
+> pyenv install 3.9.12
+> pyenv local 3.9.12
+> python -m venv p3.9.12
+> source p3.9.12/Scripts/activate
+```
+
 - Project AirSim Python client (`projectairsim`)
+
+```bash
+> python -m pip install -e ../../../clones/ProjectAirSim/client/python/projectairsim/
+```
+
 - Zenoh Python (`eclipse-zenoh`)
 - NumPy, OpenCV
 
