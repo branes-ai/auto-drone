@@ -7,6 +7,9 @@ out/
 .python-version
 p3.9.12/
 
+# ptyhon
+__pycache__
+
 # CMake
 CMakeCache.txt
 CMakeFiles/
