@@ -146,13 +146,50 @@ class AirSimZenohBridge:
 
         # Callback for RGB camera
         def on_rgb_image(topic, image_data):
-            with self.rgb_lock:
-                self.latest_rgb = image_data
+            try:
+                # Project AirSim sends image as dict:
+                # {'time_stamp': ..., 'height': ..., 'width': ..., 'encoding': 'BGR', 'data': bytes}
+                if isinstance(image_data, dict) and 'data' in image_data:
+                    height = image_data.get('height', 0)
+                    width = image_data.get('width', 0)
+                    encoding = image_data.get('encoding', 'BGR')
+                    raw_data = image_data.get('data', b'')
+
+                    if height > 0 and width > 0 and raw_data:
+                        # Convert to numpy array
+                        img = np.frombuffer(raw_data, dtype=np.uint8)
+                        channels = 3 if encoding in ('BGR', 'RGB') else 1
+                        img = img.reshape(height, width, channels)
+
+                        with self.rgb_lock:
+                            self.latest_rgb = img
+            except Exception as e:
+                if self.stats['rgb_frames'] == 0:
+                    print(f"  Error parsing RGB: {e}")
 
         # Callback for depth camera
         def on_depth_image(topic, image_data):
-            with self.depth_lock:
-                self.latest_depth = image_data
+            try:
+                # Same format as RGB but single channel or float
+                if isinstance(image_data, dict) and 'data' in image_data:
+                    height = image_data.get('height', 0)
+                    width = image_data.get('width', 0)
+                    raw_data = image_data.get('data', b'')
+
+                    if height > 0 and width > 0 and raw_data:
+                        # Depth might be float32 or uint8
+                        # Try float32 first (4 bytes per pixel)
+                        expected_float_size = height * width * 4
+                        if len(raw_data) == expected_float_size:
+                            img = np.frombuffer(raw_data, dtype=np.float32).reshape(height, width)
+                        else:
+                            img = np.frombuffer(raw_data, dtype=np.uint8).reshape(height, width)
+
+                        with self.depth_lock:
+                            self.latest_depth = img
+            except Exception as e:
+                if self.stats['depth_frames'] == 0:
+                    print(f"  Error parsing depth: {e}")
 
         # Callback for pose/odometry (from robot_info or IMU)
         def on_pose(topic, pose_data):
