@@ -108,16 +108,30 @@ class AirSimZenohBridge:
             self.client.connect()
             print("  Client connected")
 
-            # Create world - if scene_file provided, load it; otherwise use current scene
+            # Create world - if scene_file provided, load it
             if self.config.scene_file:
                 print(f"  Loading scene: {self.config.scene_file}")
                 self.world = World(self.client, self.config.scene_file, delay_after_load_sec=2)
             else:
-                # Try to get existing world/scene
-                self.world = World(self.client)
+                # No scene file - assume scene is already loaded
+                # World might not be needed for basic drone operations
+                self.world = None
+                print("  Using existing scene (no scene file specified)")
 
+            # Get drone - try with and without world parameter
             print(f"  Getting drone: {self.config.drone_name}")
-            self.drone = Drone(self.client, self.world, self.config.drone_name)
+            try:
+                if self.world:
+                    self.drone = Drone(self.client, self.world, self.config.drone_name)
+                else:
+                    # Try direct drone connection without world
+                    self.drone = Drone(self.client, self.config.drone_name)
+            except TypeError:
+                # API might have different signature - try alternatives
+                try:
+                    self.drone = Drone(self.client, self.config.drone_name)
+                except TypeError:
+                    self.drone = Drone(self.client, drone_name=self.config.drone_name)
 
             # Enable API control
             self.drone.enable_api_control()
