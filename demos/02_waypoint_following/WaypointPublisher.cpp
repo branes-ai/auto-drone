@@ -10,6 +10,7 @@
 #include <thread>
 #include <string>
 #include <cmath>
+#include <memory>
 
 namespace {
 
@@ -61,6 +62,7 @@ data_types::WaypointList create_circle_pattern(float radius, float altitude, flo
 void print_usage() {
     std::cout << "Usage: waypoint_publisher [options]\n"
               << "Options:\n"
+              << "  --connect <ep>             Remote Zenoh endpoint (e.g., tcp/192.168.1.10:7447)\n"
               << "  --pattern <square|circle>  Waypoint pattern (default: square)\n"
               << "  --size <val>               Square size or circle radius in meters (default: 5.0)\n"
               << "  --altitude <val>           Flight altitude in meters (default: 10.0)\n"
@@ -75,6 +77,7 @@ void print_usage() {
 
 int main(int argc, char* argv[]) {
     // Parse arguments
+    std::string connect_endpoint;
     std::string pattern = "square";
     float size = 5.0f;
     float altitude = 10.0f;
@@ -89,7 +92,8 @@ int main(int argc, char* argv[]) {
             print_usage();
             return 0;
         }
-        if (arg == "--pattern" && i + 1 < argc) pattern = argv[++i];
+        if (arg == "--connect" && i + 1 < argc) connect_endpoint = argv[++i];
+        else if (arg == "--pattern" && i + 1 < argc) pattern = argv[++i];
         else if (arg == "--size" && i + 1 < argc) size = std::stof(argv[++i]);
         else if (arg == "--altitude" && i + 1 < argc) altitude = std::stof(argv[++i]);
         else if (arg == "--speed" && i + 1 < argc) speed = std::stof(argv[++i]);
@@ -109,7 +113,16 @@ int main(int argc, char* argv[]) {
     std::cout << std::endl;
 
     // Initialize Zenoh session
-    zenoh_interface::Session session;
+    std::unique_ptr<zenoh_interface::Session> session_ptr;
+    if (!connect_endpoint.empty()) {
+        std::cout << "Connecting to Zenoh at " << connect_endpoint << std::endl;
+        auto session_config = zenoh_interface::SessionConfig::connect_to(connect_endpoint);
+        session_ptr = std::make_unique<zenoh_interface::Session>(session_config);
+    } else {
+        std::cout << "Using local Zenoh scouting" << std::endl;
+        session_ptr = std::make_unique<zenoh_interface::Session>();
+    }
+    auto& session = *session_ptr;
     if (!session.is_valid()) {
         std::cerr << "Failed to create Zenoh session. Exiting." << std::endl;
         return 1;
