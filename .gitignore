@@ -3,6 +3,10 @@ build/
 install/
 out/
 
+# pyenv files and directories
+.python-version
+p3.12.10/
+
 # CMake
 CMakeCache.txt
 CMakeFiles/
