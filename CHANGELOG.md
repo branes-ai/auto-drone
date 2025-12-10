@@ -44,6 +44,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - World-frame velocity doesn't curve with yaw rate
   - Fixed to compute tangential velocity from position relative to circle center
 
+- **Windows CI Zenoh Test Segfaults**
+  - Tests were crashing with SIGSEGV during Zenoh session initialization
+  - Root cause: Zenoh DLL not in PATH when ctest runs executables
+  - Added `environment` settings to Windows test presets in CMakePresets.json
+  - Added explicit PATH setup in CI workflow test step
+
 - **Python Zenoh Bridge for Project AirSim**
   - `sim_interfaces/airsim_zenoh_bridge/` - Python bridge for remote AirSim connectivity
     - `airsim_zenoh_bridge.py` - Main bridge connecting Project AirSim to Zenoh network

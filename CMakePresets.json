@@ -267,6 +267,9 @@
             "output": {
                 "outputOnFailure": true,
                 "verbosity": "default"
+            },
+            "environment": {
+                "PATH": "C:\\zenohc\\bin;C:\\opencv\\build\\x64\\vc16\\bin;$penv{PATH}"
             }
         },
         {
@@ -277,6 +280,9 @@
             "output": {
                 "outputOnFailure": true,
                 "verbosity": "default"
+            },
+            "environment": {
+                "PATH": "C:\\zenohc\\bin;C:\\opencv\\build\\x64\\vc16\\bin;$penv{PATH}"
             }
         },
         {
@@ -286,6 +292,9 @@
             "output": {
                 "outputOnFailure": true,
                 "verbosity": "default"
+            },
+            "environment": {
+                "PATH": "C:\\zenohc\\bin;C:\\opencv\\build\\x64\\vc16\\bin;$penv{PATH}"
             }
         },
         {
@@ -295,6 +304,9 @@
             "output": {
                 "outputOnFailure": true,
                 "verbosity": "default"
+            },
+            "environment": {
+                "PATH": "C:\\zenohc\\bin;C:\\opencv\\build\\x64\\vc16\\bin;$penv{PATH}"
             }
         }
     ]
