@@ -142,6 +142,31 @@ Open port 7447 on Windows for Zenoh:
 ```powershell
 # PowerShell (Administrator)
 New-NetFirewallRule -DisplayName "Zenoh Bridge" -Direction Inbound -Protocol TCP -LocalPort 7447 -Action Allow
+
+PS C:\WINDOWS\system32> New-NetFirewallRule -DisplayName "Zenoh Bridge" -Direction Inbound -Protocol TCP -LocalPort 7447 -Action Allow
+
+Name                          : {7274769c-5c42-489f-8d44-769ae2f6737f}
+DisplayName                   : Zenoh Bridge
+Description                   :
+DisplayGroup                  :
+Group                         :
+Enabled                       : True
+Profile                       : Any
+Platform                      : {}
+Direction                     : Inbound
+Action                        : Allow
+EdgeTraversalPolicy           : Block
+LooseSourceMapping            : False
+LocalOnlyMapping              : False
+Owner                         :
+PrimaryStatus                 : OK
+Status                        : The rule was parsed successfully from the store. (65536)
+EnforcementStatus             : NotApplicable
+PolicyStoreSource             : PersistentStore
+PolicyStoreSourceType         : Local
+RemoteDynamicKeywordAddresses : {}
+PolicyAppId                   :
+PackageFamilyName             :
 ```
 
 ## Troubleshooting
@@ -161,3 +186,53 @@ New-NetFirewallRule -DisplayName "Zenoh Bridge" -Direction Inbound -Protocol TCP
 ### Command Timeout
 
 Commands timeout after 0.5s if no new command received. The drone will hover automatically.
+
+
+## ● Test Results Summary
+
+  All local tests passed:
+
+  | Test                                | Result | Details                                                                      |
+  |-------------------------------------|--------|------------------------------------------------------------------------------|
+  | C++ test client (test_bridge_cpp)   | ✓ Pass | 300 RGB frames (30 Hz), 299 depth frames (30 Hz), 991 odom messages (~99 Hz) |
+  | Python test client (test_bridge.py) | ✓ Pass oper serializati| Same rates, pron/deserialization                             |
+  | Command transmission                | ✓ Pass | Velocity commands sent and received by mock bridge                           |
+  | Data serialization                  | ✓ Pass | Binary format matches between Python and C++                                 |
+
+  What was tested:
+  1. Zenoh TCP connectivity (tcp/127.0.0.1:7447)
+  2. Topic publishing: robot/drone/sensor/camera/rgb, depth, state/odom
+  3. Topic subscribing: robot/drone/cmd/velocierialization of ty
+  4. Binary sImageData, Odometry, VelocityCommand
+
+  Created file:
+  - sim_inzenoh_bridge/mocterfaces/airsim_k_bridge.py - simulates AirSim bridge for local testing
+
+  ---
+
+## Next Steps for Real AirSim Testing
+
+  To test with the real Project AirSim on Windows:
+
+  1. On Windows machine (running Project AirSim):
+
+```ps
+  # Open firewall port
+  New-NetFirewallRule -DisplayName "Zenoh Bridge" -Direction Inbound -Protocol TCP -LocalPort 7447 -Action Allow
+
+  # Run the bridge
+  python airsim_zenoh_bridge.py --zenoh-listen tcp/0.0.0.0:7447 --auto-takeoff
+```
+
+  2. On Linux machine (autonomy stack):
+```bash
+  # Test connectivity
+  ./build/linux-release/sim_interfaces/airsim_zenoh_bridge/test_bridge_cpp \
+      --connect tcp/<WINDOWS_IP>:7447 --duration 10 --send-commands
+```
+
+  3. Verify the test output shows:
+    - RGB/Depth frames expected rates
+    - Odometry at ~100 Hz
+    - Drone responds to velocity commands
+
