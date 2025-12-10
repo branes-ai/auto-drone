@@ -5,7 +5,7 @@ out/
 
 # pyenv files and directories
 .python-version
-p3.12.10/
+p3.9.12/
 
 # CMake
 CMakeCache.txt
