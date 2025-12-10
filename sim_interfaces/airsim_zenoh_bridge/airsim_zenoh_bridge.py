@@ -520,8 +520,8 @@ def main():
                        help='Robot identifier for Zenoh topics')
     parser.add_argument('--drone-name', type=str, default='Drone1',
                        help='Drone name in Project AirSim')
-    parser.add_argument('--scene', type=str, default=None,
-                       help='Scene file to load (e.g., scene_basic_drone.jsonc). If not set, uses current scene.')
+    parser.add_argument('--scene', type=str, default='scene_basic_drone.jsonc',
+                       help='Scene file to load (default: scene_basic_drone.jsonc)')
 
     # Rate configuration
     parser.add_argument('--rgb-rate', type=float, default=30.0,
