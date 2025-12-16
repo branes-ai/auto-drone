@@ -2,6 +2,7 @@
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include "ImageData.hpp"
 #include "Odometry.hpp"
+#include "ProximityData.hpp"
 
 using namespace data_types;
 using Catch::Matchers::WithinAbs;
@@ -197,5 +198,106 @@ TEST_CASE("Odometry serialized size is correct", "[Odometry]") {
 
     Odometry odom;
     auto serialized = odom.serialize();
+    REQUIRE(serialized.size() == 32);
+}
+
+// ============================================================================
+// ProximityData Tests
+// ============================================================================
+
+TEST_CASE("ProximityData default construction", "[ProximityData]") {
+    ProximityData prox;
+    REQUIRE_THAT(prox.distance_front, WithinAbs(999.0f, 0.001f));
+    REQUIRE_THAT(prox.distance_back, WithinAbs(999.0f, 0.001f));
+    REQUIRE_THAT(prox.distance_left, WithinAbs(999.0f, 0.001f));
+    REQUIRE_THAT(prox.distance_right, WithinAbs(999.0f, 0.001f));
+    REQUIRE_THAT(prox.distance_up, WithinAbs(999.0f, 0.001f));
+    REQUIRE_THAT(prox.distance_down, WithinAbs(999.0f, 0.001f));
+    REQUIRE(prox.timestamp_us == 0);
+}
+
+TEST_CASE("ProximityData parameterized construction", "[ProximityData]") {
+    ProximityData prox(1.5f, 2.0f, 3.5f, 4.0f, 10.0f, 0.5f, 1234567890ULL);
+
+    REQUIRE_THAT(prox.distance_front, WithinAbs(1.5f, 0.001f));
+    REQUIRE_THAT(prox.distance_back, WithinAbs(2.0f, 0.001f));
+    REQUIRE_THAT(prox.distance_left, WithinAbs(3.5f, 0.001f));
+    REQUIRE_THAT(prox.distance_right, WithinAbs(4.0f, 0.001f));
+    REQUIRE_THAT(prox.distance_up, WithinAbs(10.0f, 0.001f));
+    REQUIRE_THAT(prox.distance_down, WithinAbs(0.5f, 0.001f));
+    REQUIRE(prox.timestamp_us == 1234567890ULL);
+}
+
+TEST_CASE("ProximityData serialization roundtrip", "[ProximityData]") {
+    ProximityData original(1.5f, 2.3f, 3.7f, 4.1f, 5.9f, 0.8f, 9876543210ULL);
+
+    auto serialized = original.serialize();
+    REQUIRE(serialized.size() == ProximityData::SERIALIZED_SIZE);
+
+    auto restored = ProximityData::deserialize(serialized);
+
+    REQUIRE_THAT(restored.distance_front, WithinAbs(original.distance_front, 0.0001f));
+    REQUIRE_THAT(restored.distance_back, WithinAbs(original.distance_back, 0.0001f));
+    REQUIRE_THAT(restored.distance_left, WithinAbs(original.distance_left, 0.0001f));
+    REQUIRE_THAT(restored.distance_right, WithinAbs(original.distance_right, 0.0001f));
+    REQUIRE_THAT(restored.distance_up, WithinAbs(original.distance_up, 0.0001f));
+    REQUIRE_THAT(restored.distance_down, WithinAbs(original.distance_down, 0.0001f));
+    REQUIRE(restored.timestamp_us == original.timestamp_us);
+}
+
+TEST_CASE("ProximityData clear factory", "[ProximityData]") {
+    auto prox = ProximityData::clear(12345ULL);
+
+    REQUIRE_THAT(prox.distance_front, WithinAbs(999.0f, 0.001f));
+    REQUIRE_THAT(prox.distance_back, WithinAbs(999.0f, 0.001f));
+    REQUIRE_THAT(prox.distance_left, WithinAbs(999.0f, 0.001f));
+    REQUIRE_THAT(prox.distance_right, WithinAbs(999.0f, 0.001f));
+    REQUIRE_THAT(prox.distance_up, WithinAbs(999.0f, 0.001f));
+    REQUIRE_THAT(prox.distance_down, WithinAbs(999.0f, 0.001f));
+    REQUIRE(prox.timestamp_us == 12345ULL);
+}
+
+TEST_CASE("ProximityData min_distance", "[ProximityData]") {
+    ProximityData prox(5.0f, 3.0f, 4.0f, 6.0f, 10.0f, 1.5f, 0);
+
+    REQUIRE_THAT(prox.min_distance(), WithinAbs(1.5f, 0.001f));  // down is closest
+}
+
+TEST_CASE("ProximityData min_horizontal_distance", "[ProximityData]") {
+    ProximityData prox(5.0f, 3.0f, 4.0f, 6.0f, 10.0f, 0.5f, 0);
+
+    // Horizontal: front=5, back=3, left=4, right=6 → min is 3 (back)
+    REQUIRE_THAT(prox.min_horizontal_distance(), WithinAbs(3.0f, 0.001f));
+}
+
+TEST_CASE("ProximityData has_obstacle", "[ProximityData]") {
+    ProximityData clear_prox = ProximityData::clear();
+    REQUIRE_FALSE(clear_prox.has_obstacle(2.0f));
+
+    ProximityData close_front(1.5f, 999.0f, 999.0f, 999.0f, 999.0f, 999.0f, 0);
+    REQUIRE(close_front.has_obstacle(2.0f));
+    REQUIRE_FALSE(close_front.has_obstacle(1.0f));
+}
+
+TEST_CASE("ProximityData has_horizontal_obstacle", "[ProximityData]") {
+    // Obstacle only below - should not count as horizontal
+    ProximityData below_only(999.0f, 999.0f, 999.0f, 999.0f, 999.0f, 0.5f, 0);
+    REQUIRE_FALSE(below_only.has_horizontal_obstacle(2.0f));
+
+    // Obstacle on left
+    ProximityData left_close(999.0f, 999.0f, 1.5f, 999.0f, 999.0f, 999.0f, 0);
+    REQUIRE(left_close.has_horizontal_obstacle(2.0f));
+}
+
+TEST_CASE("ProximityData deserialization fails on insufficient data", "[ProximityData]") {
+    std::vector<uint8_t> too_small(20);
+    REQUIRE_THROWS_AS(ProximityData::deserialize(too_small), std::runtime_error);
+}
+
+TEST_CASE("ProximityData serialized size is correct", "[ProximityData]") {
+    REQUIRE(ProximityData::SERIALIZED_SIZE == 32);
+
+    ProximityData prox;
+    auto serialized = prox.serialize();
     REQUIRE(serialized.size() == 32);
 }

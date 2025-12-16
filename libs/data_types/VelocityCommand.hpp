@@ -30,7 +30,8 @@ struct VelocityCommand {
         WAYPOINT_MANAGER = 1,
         OBSTACLE_AVOIDANCE = 2,
         MANUAL_CONTROL = 3,
-        EMERGENCY = 4
+        EMERGENCY = 4,
+        COMMAND_ARBITER = 5
     };
     uint8_t source = UNKNOWN;
 

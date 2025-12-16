@@ -117,7 +117,7 @@ int main(int argc, char* argv[]) {
     // Zenoh key expressions
     const std::string odom_key = "robot/drone/sensor/state/odom";
     const std::string waypoint_key = "robot/drone/cmd/waypoints";
-    const std::string velocity_key = "robot/drone/cmd/velocity";
+    const std::string velocity_key = "robot/drone/cmd/nominal_vel";  // Changed for arbiter integration
 
     // Subscribe to odometry
     session.subscribe(odom_key, [](const std::string&, const std::vector<uint8_t>& payload) {

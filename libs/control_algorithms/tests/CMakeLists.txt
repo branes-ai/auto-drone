@@ -2,6 +2,7 @@
 
 add_executable(control_algorithms_tests
     PIDControllerTest.cpp
+    ReactiveAvoidanceTest.cpp
 )
 
 target_link_libraries(control_algorithms_tests PRIVATE

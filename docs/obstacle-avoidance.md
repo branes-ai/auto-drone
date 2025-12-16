@@ -4,7 +4,7 @@
 
 The Obstacle Avoidance demonstration introduces **reactive safety** and **sensor fusion** into the Zenoh architecture. This phase focuses on processing immediate proximity data (e.g., Lidar, depth cameras) and overriding nominal path planning with high-priority safety commands.
 
-### 1. Key Components \& Data Flow
+### 1. Key Components & Data Flow
 
 This demonstration requires the integration of a new sensor stream and the introduction of a **Safety Override Node**.
 
