@@ -1,0 +1,47 @@
+{
+  // Pillar Corridor Scene for Obstacle Avoidance Testing
+  // This scene positions the drone at the start of a corridor with obstacles.
+  // NOTE: Obstacles (pillars) must be placed in the Unreal Engine level separately.
+  //
+  // Corridor layout (top view, 30m long x 6m wide):
+  //   START                                         GOAL
+  //     ↓                                             ↓
+  //   [wall]     P1    P2          P3    P4        [wall]
+  //     X=0            X=8         X=16   X=24      X=30
+  //
+  // Pillar positions (1m diameter cylinders):
+  //   P1: (8, -1.5, 0) - offset left
+  //   P2: (8, 1.5, 0)  - offset right
+  //   P3: (16, -1.5, 0) - offset left
+  //   P4: (24, 1.5, 0) - offset right
+  //
+  "id": "ScenePillarCorridor",
+  "actors": [
+    {
+      "type": "robot",
+      "name": "Drone1",
+      "origin": {
+        "xyz": "0.0 0.0 -2.0",
+        "rpy-deg": "0 0 0"
+      },
+      "robot-config": "robot_quadrotor_fastphysics.jsonc"
+    }
+  ],
+  "clock": {
+    "type": "steppable",
+    "step-ns": 3000000,
+    "real-time-update-rate": 3000000,
+    "pause-on-start": false
+  },
+  "home-geo-point": {
+    "latitude": 47.641468,
+    "longitude": -122.140165,
+    "altitude": 122.0
+  },
+  "segmentation": {
+    "initialize-ids": true,
+    "ignore-existing": false,
+    "use-owner-name": true
+  },
+  "scene-type": "UnrealNative"
+}

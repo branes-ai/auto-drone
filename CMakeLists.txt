@@ -72,6 +72,7 @@ add_subdirectory(sim_interfaces/airsim_zenoh_bridge) # Python bridge + C++ test 
 
 # --- Autonomy Stack ---
 add_subdirectory(autonomy_stack/object_tracking)
+add_subdirectory(autonomy_stack/obstacle_avoidance)  # Phase 4
 # add_subdirectory(autonomy_stack/visual_slam)      # Phase 5
 # add_subdirectory(autonomy_stack/visual_nav)       # Phase 6
 
@@ -79,4 +80,4 @@ add_subdirectory(autonomy_stack/object_tracking)
 add_subdirectory(demos/01_sensor_streaming)
 add_subdirectory(demos/02_waypoint_following)
 add_subdirectory(demos/03_object_tracking)
-# add_subdirectory(demos/04_obstacle_avoidance) # Phase 4
+add_subdirectory(demos/04_obstacle_avoidance)  # Phase 4

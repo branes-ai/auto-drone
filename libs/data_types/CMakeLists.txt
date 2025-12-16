@@ -11,6 +11,8 @@ add_library(data_types STATIC
     VelocityCommand.hpp
     ObjectDetection.cpp
     ObjectDetection.hpp
+    ProximityData.cpp
+    ProximityData.hpp
 )
 
 target_link_libraries(data_types PUBLIC
