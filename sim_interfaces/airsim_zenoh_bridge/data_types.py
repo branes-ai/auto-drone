@@ -265,34 +265,33 @@ class WaypointList:
     Waypoint list matching C++ WaypointList serialization.
 
     Binary format (little-endian):
-        [count:u32][waypoints:28*count][timestamp_us:u64]
+        [count:u32][timestamp_us:u64][waypoints:28*count]
     """
     waypoints: list
     timestamp_us: int = 0
 
     def serialize(self) -> bytes:
         """Serialize to binary format matching C++ implementation."""
-        data = struct.pack('<I', len(self.waypoints))
+        # Header: count (4 bytes) + timestamp (8 bytes), then waypoints
+        data = struct.pack('<IQ', len(self.waypoints), self.timestamp_us)
         for wp in self.waypoints:
             data += wp.serialize()
-        data += struct.pack('<Q', self.timestamp_us)
         return data
 
     @classmethod
     def deserialize(cls, payload: bytes) -> 'WaypointList':
         """Deserialize from binary format."""
-        if len(payload) < 4:
-            raise ValueError(f"Payload too small: {len(payload)} < 4")
+        header_size = 4 + 8  # count + timestamp
+        if len(payload) < header_size:
+            raise ValueError(f"Payload too small: {len(payload)} < {header_size}")
 
-        count = struct.unpack('<I', payload[:4])[0]
-        offset = 4
+        count, timestamp_us = struct.unpack('<IQ', payload[:header_size])
+        offset = header_size
         waypoints = []
 
         for _ in range(count):
             wp = Waypoint.deserialize(payload[offset:offset + Waypoint.SERIALIZED_SIZE])
             waypoints.append(wp)
             offset += Waypoint.SERIALIZED_SIZE
-
-        timestamp_us = struct.unpack('<Q', payload[offset:offset + 8])[0] if offset + 8 <= len(payload) else 0
 
         return cls(waypoints=waypoints, timestamp_us=timestamp_us)
