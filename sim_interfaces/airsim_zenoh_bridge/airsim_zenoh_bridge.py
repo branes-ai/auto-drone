@@ -430,11 +430,15 @@ class AirSimZenohBridge:
 
             # Apply velocity command to AirSim using async API
             # Project AirSim uses NED frame: v_north, v_east, v_down
+            # yaw_rate is in rad/s, AirSim expects degrees/s
+            yaw_rate_deg = math.degrees(cmd.yaw_rate) if cmd.yaw_rate != 0 else 0
+
             move_task = await self.drone.move_by_velocity_async(
                 v_north=cmd.vx,
                 v_east=cmd.vy,
                 v_down=cmd.vz,
-                duration=0.2  # Slightly longer duration to ensure command takes effect
+                duration=0.2,
+                yaw_mode={'is_rate': True, 'yaw_or_rate': yaw_rate_deg}
             )
             # Don't await the task - let it run and be replaced by next command
 
