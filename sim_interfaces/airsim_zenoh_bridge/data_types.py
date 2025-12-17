@@ -150,6 +150,7 @@ class CommandSource(IntEnum):
     OBSTACLE_AVOIDANCE = 2
     MANUAL_CONTROL = 3
     EMERGENCY = 4
+    COMMAND_ARBITER = 5
 
 
 @dataclass
@@ -214,3 +215,84 @@ class VelocityCommand:
             source=CommandSource.EMERGENCY,
             timestamp_us=timestamp_us
         )
+
+
+@dataclass
+class Waypoint:
+    """
+    Single waypoint matching C++ Waypoint serialization.
+
+    Binary format (little-endian):
+        [x:f32][y:f32][z:f32][yaw:f32][speed:f32][id:u32][flags:u8][padding:3]
+        Total: 28 bytes
+    """
+    x: float
+    y: float
+    z: float
+    yaw: float = 0.0
+    speed: float = 1.0
+    id: int = 0
+    flags: int = 0
+
+    # Flags as class attributes (matching C++ nested enum)
+    NONE = 0
+    HOLD_YAW = 1 << 0    # Maintain specified yaw during approach
+    HOVER = 1 << 1       # Hover at waypoint briefly
+    FINAL = 1 << 2       # Last waypoint in sequence
+
+    SERIALIZED_SIZE = 28
+    FORMAT = '<fffffIBxxx'  # 5 floats + 1 uint32 + 1 uint8 + 3 padding
+
+    def serialize(self) -> bytes:
+        """Serialize to binary format matching C++ implementation."""
+        return struct.pack(self.FORMAT,
+                          self.x, self.y, self.z, self.yaw, self.speed,
+                          self.id, self.flags)
+
+    @classmethod
+    def deserialize(cls, payload: bytes) -> 'Waypoint':
+        """Deserialize from binary format."""
+        if len(payload) < cls.SERIALIZED_SIZE:
+            raise ValueError(f"Invalid payload size: {len(payload)} < {cls.SERIALIZED_SIZE}")
+
+        x, y, z, yaw, speed, wp_id, flags = struct.unpack(cls.FORMAT, payload[:cls.SERIALIZED_SIZE])
+        return cls(x=x, y=y, z=z, yaw=yaw, speed=speed, id=wp_id, flags=flags)
+
+
+@dataclass
+class WaypointList:
+    """
+    Waypoint list matching C++ WaypointList serialization.
+
+    Binary format (little-endian):
+        [count:u32][waypoints:28*count][timestamp_us:u64]
+    """
+    waypoints: list
+    timestamp_us: int = 0
+
+    def serialize(self) -> bytes:
+        """Serialize to binary format matching C++ implementation."""
+        data = struct.pack('<I', len(self.waypoints))
+        for wp in self.waypoints:
+            data += wp.serialize()
+        data += struct.pack('<Q', self.timestamp_us)
+        return data
+
+    @classmethod
+    def deserialize(cls, payload: bytes) -> 'WaypointList':
+        """Deserialize from binary format."""
+        if len(payload) < 4:
+            raise ValueError(f"Payload too small: {len(payload)} < 4")
+
+        count = struct.unpack('<I', payload[:4])[0]
+        offset = 4
+        waypoints = []
+
+        for _ in range(count):
+            wp = Waypoint.deserialize(payload[offset:offset + Waypoint.SERIALIZED_SIZE])
+            waypoints.append(wp)
+            offset += Waypoint.SERIALIZED_SIZE
+
+        timestamp_us = struct.unpack('<Q', payload[offset:offset + 8])[0] if offset + 8 <= len(payload) else 0
+
+        return cls(waypoints=waypoints, timestamp_us=timestamp_us)
