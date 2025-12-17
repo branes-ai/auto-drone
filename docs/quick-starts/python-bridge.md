@@ -12,7 +12,7 @@ The current Project AirSim only has a python client, so we need to create a brid
   │       ↕                             │        │  - Path Planning                │
   │  Zenoh Publisher/Subscriber         │        │  - Control Algorithms           │
   │       ↕                             │        │       ↕                         │
-  │  [Zenoh Network Transport]  ←───────────────→│  [Zenoh Subscriber/Publisher]   │
+  │  [Zenoh Network Transport]  <───────────────>│  [Zenoh Subscriber/Publisher]   │
   └─────────────────────────────────────┘        └─────────────────────────────────┘
 ```
 
