@@ -271,6 +271,12 @@ class PillarCorridorMission:
     def stop(self):
         """Stop the mission."""
         self.running = False
+        if self.session:
+            try:
+                self.session.close()
+            except Exception:
+                pass
+            self.session = None
 
 
 def main():
@@ -296,8 +302,10 @@ def main():
 
     try:
         mission.run(args.duration, args.rate)
+    except KeyboardInterrupt:
+        print("\nInterrupted...")
     finally:
-        pass  # Zenoh session cleanup is automatic
+        mission.stop()
 
     return 0
 
