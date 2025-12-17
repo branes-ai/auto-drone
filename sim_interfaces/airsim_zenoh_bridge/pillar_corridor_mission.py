@@ -23,7 +23,6 @@ Usage:
 """
 
 import argparse
-import signal
 import sys
 import time
 import threading
@@ -271,11 +270,11 @@ class PillarCorridorMission:
     def stop(self):
         """Stop the mission."""
         self.running = False
+
+    def disconnect(self):
+        """Close Zenoh session."""
         if self.session:
-            try:
-                self.session.close()
-            except Exception:
-                pass
+            self.session.close()
             self.session = None
 
 
@@ -290,23 +289,16 @@ def main():
 
     mission = PillarCorridorMission(args.connect, args.robot_id)
 
-    def signal_handler(sig, frame):
-        print("\nInterrupted, stopping...")
-        mission.stop()
-
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
-
     if not mission.connect():
         return 1
 
     try:
         mission.run(args.duration, args.rate)
     except KeyboardInterrupt:
-        print("\nInterrupted...")
-    finally:
-        mission.stop()
+        print("\nInterrupted.")
 
+    mission.stop()
+    mission.disconnect()
     return 0
 
 
