@@ -180,12 +180,20 @@ class PillarCorridorMission:
 
     def publish_waypoints(self):
         """Publish corridor waypoints."""
+        # Use current altitude to avoid unexpected descent/ascent
+        current_z = -5.0  # Default safe altitude (5m up in NED)
+        with self.odom_lock:
+            if self.current_odom:
+                current_z = self.current_odom.z
+
+        print(f"Using waypoint altitude: z={current_z:.1f}")
+
         waypoints = [
-            Waypoint(x=10.0, y=0.0, z=-2.0, yaw=0.0, speed=1.0,
+            Waypoint(x=10.0, y=0.0, z=current_z, yaw=0.0, speed=1.0,
                     flags=Waypoint.HOLD_YAW, id=1),
-            Waypoint(x=20.0, y=0.0, z=-2.0, yaw=0.0, speed=1.0,
+            Waypoint(x=20.0, y=0.0, z=current_z, yaw=0.0, speed=1.0,
                     flags=Waypoint.HOLD_YAW, id=2),
-            Waypoint(x=30.0, y=0.0, z=-2.0, yaw=0.0, speed=1.0,
+            Waypoint(x=30.0, y=0.0, z=current_z, yaw=0.0, speed=1.0,
                     flags=Waypoint.HOLD_YAW, id=3),
         ]
 
