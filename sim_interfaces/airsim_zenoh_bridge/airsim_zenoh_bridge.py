@@ -424,13 +424,17 @@ class AirSimZenohBridge:
                 else:
                     cmd = self.current_command
 
+            # Debug: print velocity every 50 commands (once per second at 50Hz)
+            if self.stats['commands_applied'] % 50 == 0:
+                print(f"  Vel cmd: vx={cmd.vx:.2f}, vy={cmd.vy:.2f}, vz={cmd.vz:.2f}, yaw_rate={cmd.yaw_rate:.2f}")
+
             # Apply velocity command to AirSim using async API
             # Project AirSim uses NED frame: v_north, v_east, v_down
             move_task = await self.drone.move_by_velocity_async(
                 v_north=cmd.vx,
                 v_east=cmd.vy,
                 v_down=cmd.vz,
-                duration=0.1  # Short duration, will be refreshed
+                duration=0.2  # Slightly longer duration to ensure command takes effect
             )
             # Don't await the task - let it run and be replaced by next command
 
