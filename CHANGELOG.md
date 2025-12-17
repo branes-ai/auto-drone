@@ -8,6 +8,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Phase 4: Obstacle Avoidance**
+  - `libs/data_types/ProximityData` - 6-direction proximity sensor data type
+    - Front/back/left/right/up/down distances (32 bytes serialized)
+    - Helper methods: `min_distance()`, `min_horizontal_distance()`, `has_obstacle()`
+  - `libs/control_algorithms/ReactiveAvoidance` - Repulsive potential field controller
+    - CLEAR/AVOIDING/CRITICAL states based on obstacle proximity
+    - Configurable safety distance, critical distance, max avoidance speed
+    - Velocity magnitude clamping with direction preservation
+  - `autonomy_stack/obstacle_avoidance/CommandArbiter` - Priority-based command arbitration
+    - Selects highest priority non-stale command from multiple sources
+    - Staleness filtering with configurable timeout (default 500ms)
+    - Falls back to hover when no valid commands
+  - `demos/04_obstacle_avoidance/` - Obstacle avoidance demo executables
+    - `mock_proximity_publisher` - Synthetic proximity data generator
+    - `obstacle_avoidance_node` - Reactive avoidance with HIGH priority commands
+    - `command_arbiter_node` - Arbitrates nominal vs reactive velocity commands
+  - `VelocityCommand::COMMAND_ARBITER` - New source enum value for arbiter output
+  - AirSim pillar corridor scene and mission
+    - `scene_pillar_corridor.jsonc` - Scene configuration for obstacle course
+    - `pillar_corridor_mission.py` - Python mission script with waypoints and proximity simulation
+
+### Changed
+- WaypointManager now publishes to `cmd/nominal_vel` topic (was `cmd/velocity`)
+  - Enables command arbitration with obstacle avoidance
+
 - **Waypoint Demo Integration with AirSim Bridge**
   - Added `--connect <endpoint>` option to `waypoint_manager` and `waypoint_publisher`
   - Enables remote Zenoh connections (e.g., `--connect tcp/192.168.1.10:7447`)
