@@ -151,6 +151,8 @@ class FlyToOrangeBallMission:
         self.vertical_gain = 0.5     # Vertical velocity gain
         self.approach_area = 50000    # Target area when "close enough"
         self.search_yaw_rate = 0.5    # Yaw rate when searching (rad/s)
+        self.search_altitude = -15.0  # Target altitude for search (NED, negative = up)
+        self.ascent_speed = 2.0       # m/s vertical speed when ascending
 
     def connect(self) -> bool:
         """Connect to Zenoh."""
@@ -247,7 +249,20 @@ class FlyToOrangeBallMission:
         pos = self.get_position()
         print(f"Starting position: ({pos[0]:.1f}, {pos[1]:.1f}, {pos[2]:.1f})")
 
-        print("\nSearching for orange ball...")
+        # Phase 1: Ascend to search altitude
+        print(f"\nPhase 1: Ascending to search altitude ({-self.search_altitude:.0f}m)...")
+        while self.running and pos[2] > self.search_altitude + 0.5:
+            self.send_velocity(0, 0, -self.ascent_speed, 0)  # negative vz = ascend
+            time.sleep(0.1)
+            pos = self.get_position()
+            print(f"  Altitude: {-pos[2]:.1f}m", end='\r')
+
+        self.hover()
+        pos = self.get_position()
+        print(f"\nReached search altitude: {-pos[2]:.1f}m")
+
+        # Phase 2: Search for target
+        print("\nPhase 2: Searching for orange ball...")
         print("Press Ctrl+C to stop.\n")
 
         # Control loop
@@ -305,13 +320,21 @@ class FlyToOrangeBallMission:
                     break
 
             else:
-                # No target visible - search by rotating
-                self.send_velocity(0, 0, 0, self.search_yaw_rate)
+                # No target visible - search using expanding spiral pattern
+                # With down-camera, we need to move horizontally to see different areas
+                elapsed = time.time() - start_time
+                search_radius = 1.0 + elapsed * 0.1  # Expanding radius over time
+                search_angle = elapsed * 0.5  # Rotate around center
+
+                # Spiral outward from start position
+                vx = math.cos(search_angle) * min(search_radius, 2.0) * 0.3
+                vy = math.sin(search_angle) * min(search_radius, 2.0) * 0.3
+                self.send_velocity(vx, vy, 0, self.search_yaw_rate)
 
                 if time.time() - last_status_time > 2.0:
                     last_status_time = time.time()
                     pos = self.get_position()
-                    print(f"  Searching (yaw_rate={self.search_yaw_rate:.1f})... "
+                    print(f"  Spiral search (r={search_radius:.1f}m)... "
                           f"pos=({pos[0]:.1f}, {pos[1]:.1f}, {pos[2]:.1f})")
 
             # Maintain loop rate
@@ -349,11 +372,13 @@ def main():
     parser.add_argument("--robot-id", default="drone", help="Robot ID (default: drone)")
     parser.add_argument("--timeout", type=float, default=120.0, help="Mission timeout in seconds")
     parser.add_argument("--speed", type=float, default=1.0, help="Forward speed m/s (default: 1.0)")
+    parser.add_argument("--altitude", type=float, default=15.0, help="Search altitude in meters (default: 15)")
 
     args = parser.parse_args()
 
     mission = FlyToOrangeBallMission(args.connect, args.robot_id)
     mission.forward_speed = args.speed
+    mission.search_altitude = -args.altitude  # Convert to NED (negative = up)
 
     if not mission.connect():
         return 1
