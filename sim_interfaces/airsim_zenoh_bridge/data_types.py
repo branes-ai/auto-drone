@@ -426,3 +426,47 @@ class DetectorConfig:
         """Deserialize from JSON bytes."""
         data = json.loads(payload.decode('utf-8'))
         return cls(**data)
+
+
+@dataclass
+class CameraDetectionList(DetectionList):
+    """
+    Detections from a specific camera with camera metadata.
+
+    Extends DetectionList with camera geometry for world-frame transforms.
+    """
+    camera_id: str = ""
+    camera_position: tuple = (0.0, 0.0, 0.0)      # x, y, z relative to drone
+    camera_orientation: tuple = (0.0, 0.0, 0.0)   # roll, pitch, yaw in degrees
+
+    def serialize(self) -> bytes:
+        """Serialize to JSON bytes with camera info."""
+        data = {
+            'timestamp_us': self.timestamp_us,
+            'frame_id': self.frame_id,
+            'image_width': self.image_width,
+            'image_height': self.image_height,
+            'inference_time_ms': self.inference_time_ms,
+            'camera_id': self.camera_id,
+            'camera_position': list(self.camera_position),
+            'camera_orientation': list(self.camera_orientation),
+            'detections': [d.to_dict() for d in self.detections]
+        }
+        return json.dumps(data).encode('utf-8')
+
+    @classmethod
+    def deserialize(cls, payload: bytes) -> 'CameraDetectionList':
+        """Deserialize from JSON bytes."""
+        data = json.loads(payload.decode('utf-8'))
+        detections = [Detection.from_dict(d) for d in data.get('detections', [])]
+        return cls(
+            timestamp_us=data['timestamp_us'],
+            frame_id=data['frame_id'],
+            image_width=data['image_width'],
+            image_height=data['image_height'],
+            inference_time_ms=data['inference_time_ms'],
+            camera_id=data.get('camera_id', ''),
+            camera_position=tuple(data.get('camera_position', (0, 0, 0))),
+            camera_orientation=tuple(data.get('camera_orientation', (0, 0, 0))),
+            detections=detections
+        )
