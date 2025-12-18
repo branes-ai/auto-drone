@@ -1,0 +1,70 @@
+# start the AirSim/Zenoh bridge on the simulator host
+python airsim_zenoh_bridge.py --zenoh-listen tcp/0.0.0.0:7447 --auto-takeoff --scene branes_visnav_drone.jsonc --drone-name Drone1
+
+### missions
+
+# fly the drone around
+python drone_commander.py --connect tcp/192.168.1.10:7447
+
+# find orange ball mission: pixel blob accounting
+python fly_to_orange_ball.py --connect tcp/192.168.1.10:7447 \
+      --altitude 25
+
+# find orange ball mission phased: pixel blob accounting
+python fly_to_orange_ball_phased.py --connect tcp/192.168.1.10:7447 \
+      --altitude 25
+
+# find orange ball mission phased: YOLO-World object detection
+python fly_to_orange_ball_yolo.py --connect tcp/192.168.1.10:7447 \
+      --altitude 25
+
+# Multiple cameras with same prompts
+python yolo_multi_camera_detector.py --connect tcp/192.168.1.10:7447 \
+      --cameras front back down \
+      --prompts "orange ball"
+
+# Different prompts per camera
+python yolo_multi_camera_detector.py --connect tcp/192.168.1.10:7447 \
+      --cameras front back \
+      --front-prompts "orange ball" "obstacle" \
+      --back-prompts "person" "drone"
+
+
+  Multi-Camera Mission Phases
+
+  | Phase       | Description                       | Cameras Used         |
+  |-------------|-----------------------------------|----------------------|
+  | 1. ASCEND   | Rise to 25m                       | -                    |
+  | 2. SCAN     | 180° rotation (not 360°)          | front + back         |
+  | 3. SELECT   | Pick best target from all cameras | -                    |
+  | 4. CRUISE   | Fly to target at safe altitude    | -                    |
+  | 5. DESCEND  | Drop to 5m when overhead          | -                    |
+  | 6. APPROACH | Visual servoing to target         | front → down handoff |
+
+  Key Features
+
+  Efficient Scanning:
+  - Only 180° rotation needed (front+back = 360° coverage)
+  - ~50% faster than single-camera scan
+
+  Camera Handoff in Phase 6:
+  dist > 8m  → Use FRONT camera (horizontal approach)
+  dist < 8m  → Switch to DOWN camera (precision landing)
+  no visual  → Fall back to waypoint navigation
+
+  Camera-Aware Position Estimation:
+  - Back camera detections account for 180° yaw offset
+  - Down camera bearings map to horizontal movement
+
+  Usage
+
+  # Terminal 1: Bridge
+  python airsim_zenoh_bridge.py --connect tcp/192.168.1.10:7447
+
+  # Terminal 2: Multi-camera detector
+  python yolo_multi_camera_detector.py --connect tcp/192.168.1.10:7447 \
+      --cameras front back down --prompts "orange ball"
+
+  # Terminal 3: Mission
+  python fly_to_orange_ball_multicam.py --connect tcp/192.168.1.10:7447
+
