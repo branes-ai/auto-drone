@@ -38,6 +38,7 @@ class DetectedObject:
     bearing_y: float
     area: int             # Pixel area
     circularity: float    # Shape metric (1.0 = circle)
+    orange_score: float   # Color quality (0-1, higher = more orange)
     drone_x: float        # Drone position when detected
     drone_y: float
     drone_z: float
@@ -101,28 +102,51 @@ class ObjectInventory:
         self.objects.append(obj)
 
     def get_best_ball(self) -> Optional[DetectedObject]:
-        """Get the most ball-like object (highest circularity * area score)."""
+        """Get the most ball-like ORANGE object."""
         if not self.objects:
             return None
-        # Score by circularity and size
-        return max(self.objects, key=lambda o: o.circularity * math.sqrt(o.area))
+
+        # Filter for ball candidates: must have high circularity (> 0.74)
+        # A sphere should have circularity close to 1.0
+        # A rectangle has circularity ~0.78 or lower (but can appear higher at angles)
+        ball_candidates = [o for o in self.objects if o.circularity > 0.74]
+
+        if not ball_candidates:
+            print("  WARNING: No objects with circularity > 0.74 (sphere-like)")
+            # Fall back to all objects but still prioritize circularity
+            ball_candidates = self.objects
+
+        # Score: circularity⁴ × orange_score × √area
+        # Power of 4 HEAVILY penalizes non-circular shapes
+        # circ=0.73 → 0.28, circ=0.76 → 0.33, circ=0.85 → 0.52, circ=0.95 → 0.81
+        return max(ball_candidates, key=lambda o: (o.circularity ** 4) * o.orange_score * math.sqrt(o.area))
 
     def print_inventory(self):
-        """Print all detected objects."""
+        """Print all detected objects with scores."""
         print(f"\n  Found {len(self.objects)} object(s):")
+        print(f"  (Ball candidates need circularity > 0.74, score uses circ⁴)")
         for i, obj in enumerate(self.objects):
-            print(f"    {i+1}. pos=({obj.world_x:.1f}, {obj.world_y:.1f}) "
-                  f"area={obj.area} circ={obj.circularity:.2f}")
+            # Score uses circularity⁴ to heavily penalize non-circular shapes
+            score = (obj.circularity ** 4) * obj.orange_score * math.sqrt(obj.area)
+            is_candidate = "✓" if obj.circularity > 0.74 else " "
+            print(f"    {is_candidate} {i+1}. pos=({obj.world_x:.1f}, {obj.world_y:.1f}) "
+                  f"area={obj.area} circ={obj.circularity:.2f} orange={obj.orange_score:.2f} score={score:.1f}")
 
 
 class OrangeBallDetector:
     """Detects orange ball-shaped objects using HSV color thresholding."""
 
     def __init__(self):
-        self.hsv_lower = np.array([5, 100, 100])
+        # HSV range for orange: Hue 5-25, high saturation, high value
+        self.hsv_lower = np.array([5, 120, 120])
         self.hsv_upper = np.array([25, 255, 255])
         self.min_area = 200
         self.min_circularity = 0.4
+
+        # Ideal orange color (Hue ~15, high sat, high val)
+        self.ideal_hue = 15.0
+        self.ideal_saturation = 200.0
+        self.ideal_value = 200.0
 
     def _circularity(self, contour) -> float:
         """Calculate circularity: 4*pi*area/perimeter^2."""
@@ -132,10 +156,37 @@ class OrangeBallDetector:
             return 0
         return 4 * math.pi * area / (perimeter * perimeter)
 
-    def detect_all(self, image: np.ndarray) -> List[Tuple[float, float, int, float]]:
+    def _orange_score(self, hsv_image: np.ndarray, mask: np.ndarray, contour) -> float:
+        """
+        Calculate how 'orange' the detected region is (0-1).
+        Based on how close the mean HSV is to ideal orange.
+        """
+        # Create mask for just this contour
+        contour_mask = np.zeros(mask.shape, dtype=np.uint8)
+        cv2.drawContours(contour_mask, [contour], -1, 255, -1)
+
+        # Get mean HSV values in the contour
+        mean_hsv = cv2.mean(hsv_image, mask=contour_mask)
+        hue, sat, val = mean_hsv[0], mean_hsv[1], mean_hsv[2]
+
+        # Score based on distance from ideal orange
+        # Hue score: ideal is 15, range is 0-180 in OpenCV
+        hue_diff = abs(hue - self.ideal_hue)
+        hue_score = max(0, 1.0 - hue_diff / 15.0)  # Full score within ±15
+
+        # Saturation score: higher is better for vivid orange
+        sat_score = min(1.0, sat / self.ideal_saturation)
+
+        # Value score: higher is better (not too dark)
+        val_score = min(1.0, val / self.ideal_value)
+
+        # Combined score (weight hue most heavily)
+        return hue_score * 0.5 + sat_score * 0.3 + val_score * 0.2
+
+    def detect_all(self, image: np.ndarray) -> List[Tuple[float, float, int, float, float]]:
         """
         Detect all orange ball-like objects in image.
-        Returns list of (bearing_x, bearing_y, area, circularity).
+        Returns list of (bearing_x, bearing_y, area, circularity, orange_score).
         """
         if image is None or image.size == 0:
             return []
@@ -164,6 +215,9 @@ class OrangeBallDetector:
             if circularity < self.min_circularity:
                 continue
 
+            # Calculate orange score
+            orange_score = self._orange_score(hsv, mask, contour)
+
             # Get centroid
             M = cv2.moments(contour)
             if M["m00"] == 0:
@@ -176,7 +230,7 @@ class OrangeBallDetector:
             bearing_x = (cx - width / 2) / (width / 2)
             bearing_y = (cy - height / 2) / (height / 2)
 
-            detections.append((bearing_x, bearing_y, int(area), circularity))
+            detections.append((bearing_x, bearing_y, int(area), circularity, orange_score))
 
         return detections
 
@@ -258,6 +312,14 @@ class PhasedMission:
         return (0, 0, 0, 0)
 
     def send_velocity(self, vx: float, vy: float, vz: float, yaw_rate: float):
+        """
+        Send velocity command.
+
+        IMPORTANT: The AirSim bridge interprets velocities as WORLD FRAME:
+          vx = v_north (North component, NED +X)
+          vy = v_east (East component, NED +Y)
+          vz = v_down (Down component, NED +Z, positive = descend)
+        """
         cmd = VelocityCommand(
             vx=vx, vy=vy, vz=vz, yaw_rate=yaw_rate,
             priority=CommandPriority.NORMAL,
@@ -334,13 +396,14 @@ class PhasedMission:
             image = self.get_image()
             if image is not None:
                 detections = self.detector.detect_all(image)
-                for bearing_x, bearing_y, area, circularity in detections:
+                for bearing_x, bearing_y, area, circularity, orange_score in detections:
                     obj = DetectedObject(
                         timestamp=time.time(),
                         bearing_x=bearing_x,
                         bearing_y=bearing_y,
                         area=area,
                         circularity=circularity,
+                        orange_score=orange_score,
                         drone_x=x, drone_y=y, drone_z=z,
                         drone_yaw=current_yaw
                     )
@@ -365,79 +428,136 @@ class PhasedMission:
 
         target = self.inventory.get_best_ball()
         if target:
-            print(f"\n  Selected target: ({target.world_x:.1f}, {target.world_y:.1f})")
+            score = (target.circularity ** 4) * target.orange_score * math.sqrt(target.area)
+            print(f"\n  SELECTED TARGET:")
+            print(f"    World position: ({target.world_x:.1f}, {target.world_y:.1f})")
+            print(f"    Detected area: {target.area} pixels")
+            print(f"    Circularity: {target.circularity:.2f} (1.0 = perfect circle)")
+            print(f"    Orange score: {target.orange_score:.2f} (1.0 = ideal orange)")
+            print(f"    Combined score: {score:.1f} (circ⁴ × orange × √area)")
+            print(f"    Drone was at: ({target.drone_x:.1f}, {target.drone_y:.1f}, alt={-target.drone_z:.1f}m)")
+            print(f"    Drone yaw was: {math.degrees(target.drone_yaw):.0f}°")
             return target
         else:
             print("  No suitable target found!")
             return None
 
     def phase4_navigate(self, target: DetectedObject) -> bool:
-        """Phase 4: Navigate to target location using velocity commands."""
+        """
+        Phase 4: Navigate to target using "fly over, then descend" strategy.
+
+        This avoids obstacles by:
+        1. CRUISE: Fly horizontally at search altitude until above target
+        2. DESCEND: Descend vertically to approach altitude
+        3. FINAL: Slow approach to target
+        """
         print(f"\n[PHASE 4] Navigating to target...")
 
-        target_z = self.approach_altitude
-        print(f"  Target: ({target.world_x:.1f}, {target.world_y:.1f}, {-target_z:.1f}m)")
+        target_z = self.approach_altitude  # e.g., -5.0 (5m altitude in NED)
+        cruise_z = self.observation_altitude  # Stay at search altitude during cruise
+        descent_threshold = 10.0  # Start descent when within this XY distance
 
-        nav_speed = 5.0  # m/s
-        descent_speed = 2.0  # m/s
-        arrival_threshold = 5.0  # meters
+        print(f"  Target position: ({target.world_x:.1f}, {target.world_y:.1f})")
+        print(f"  Cruise altitude: {-cruise_z:.1f}m (until within {descent_threshold:.0f}m)")
+        print(f"  Final altitude: {-target_z:.1f}m")
+
+        x, y, z, yaw = self.get_pose()
+        dx = target.world_x - x
+        dy = target.world_y - y
+        initial_dist = math.sqrt(dx*dx + dy*dy)
+        initial_heading = math.atan2(dy, dx)
+        print(f"  Current position: ({x:.1f}, {y:.1f}, alt={-z:.1f}m)")
+        print(f"  Initial distance: {initial_dist:.1f}m")
+        print(f"  Heading to target: {math.degrees(initial_heading):.0f}°")
+        print(f"  Current yaw: {math.degrees(yaw):.0f}°")
+
+        nav_speed = 5.0  # m/s horizontal
+        descent_speed = 2.0  # m/s vertical
 
         start_time = time.time()
         last_print = 0
 
-        while self.running and (time.time() - start_time) < 60.0:
+        while self.running and (time.time() - start_time) < 90.0:
             x, y, z, yaw = self.get_pose()
 
-            # Vector to target in world frame
+            # Vector to target in world frame (NED: x=North, y=East)
             dx = target.world_x - x
             dy = target.world_y - y
-            dz = target_z - z  # Target altitude
             dist_xy = math.sqrt(dx*dx + dy*dy)
-
-            # Check arrival
-            if dist_xy < arrival_threshold:
-                self.hover()
-                print(f"\n  Arrived at target! Distance: {dist_xy:.1f}m")
-                return True
-
-            # Compute heading to target
             target_heading = math.atan2(dy, dx)
 
-            # Velocity in world frame (NED)
-            speed = min(nav_speed, dist_xy)  # Slow down as we approach
-            vx_world = speed * math.cos(target_heading)
-            vy_world = speed * math.sin(target_heading)
-
-            # Altitude control - descend to approach altitude
-            if z > target_z + 1.0:
-                vz = descent_speed  # Descend (positive vz = down in NED)
-            elif z < target_z - 1.0:
-                vz = -descent_speed  # Ascend
-            else:
-                vz = 0
-
-            # Transform world velocity to body frame
-            cos_yaw = math.cos(yaw)
-            sin_yaw = math.sin(yaw)
-            vx_body = vx_world * cos_yaw + vy_world * sin_yaw
-            vy_body = -vx_world * sin_yaw + vy_world * cos_yaw
-
-            # Yaw to face target
+            # Yaw error (how much we need to turn to face target)
             yaw_error = target_heading - yaw
-            # Normalize to [-pi, pi]
             while yaw_error > math.pi:
                 yaw_error -= 2 * math.pi
             while yaw_error < -math.pi:
                 yaw_error += 2 * math.pi
-            yaw_rate = 1.0 * yaw_error  # P-control for yaw
 
-            self.send_velocity(vx_body, vy_body, vz, yaw_rate)
+            target_hdg_deg = math.degrees(target_heading)
+            yaw_deg = math.degrees(yaw)
+            yaw_err_deg = math.degrees(yaw_error)
+
+            # Determine phase based on position
+            at_cruise_alt = z < cruise_z + 2.0  # Within 2m of cruise altitude
+            at_final_alt = z > target_z - 1.0   # Within 1m of final altitude
+            over_target = dist_xy < descent_threshold
+
+            if dist_xy < 5.0 and at_final_alt:
+                # SUCCESS: Close enough horizontally and at correct altitude
+                self.hover()
+                print(f"\n  ARRIVED! Distance: {dist_xy:.1f}m")
+                print(f"  Final position: ({x:.1f}, {y:.1f}, alt={-z:.1f}m)")
+                print(f"  Facing: {yaw_deg:.0f}° (target was at {target_hdg_deg:.0f}°)")
+                return True
+
+            elif over_target and not at_final_alt:
+                # DESCEND: Over target, descend to final altitude
+                phase = "DESCEND"
+                # Descend while maintaining position (small corrections only)
+                vz = descent_speed  # Positive = descend in NED
+                # Small position corrections
+                correction_speed = min(1.0, dist_xy * 0.2)
+                vx_world = correction_speed * math.cos(target_heading)
+                vy_world = correction_speed * math.sin(target_heading)
+                # Keep facing target
+                yaw_rate = 0.5 * yaw_error
+                self.send_velocity(vx_world, vy_world, vz, yaw_rate)
+                status = f"descending to {-target_z:.0f}m"
+
+            elif over_target and at_final_alt:
+                # FINAL: At altitude, close in slowly
+                phase = "FINAL"
+                approach_speed = min(2.0, dist_xy * 0.3)
+                vx_world = approach_speed * math.cos(target_heading)
+                vy_world = approach_speed * math.sin(target_heading)
+                yaw_rate = 0.5 * yaw_error
+                self.send_velocity(vx_world, vy_world, 0, yaw_rate)
+                status = f"approaching, spd={approach_speed:.1f}"
+
+            else:
+                # CRUISE: Fly horizontally at cruise altitude toward target
+                phase = "CRUISE"
+                speed = min(nav_speed, max(2.0, dist_xy * 0.15))
+                vx_world = speed * math.cos(target_heading)
+                vy_world = speed * math.sin(target_heading)
+
+                # Maintain cruise altitude
+                if z > cruise_z + 1.0:
+                    vz = -descent_speed  # Ascend (negative vz)
+                elif z < cruise_z - 1.0:
+                    vz = descent_speed   # Descend (positive vz)
+                else:
+                    vz = 0
+
+                yaw_rate = 1.5 * yaw_error
+                self.send_velocity(vx_world, vy_world, vz, yaw_rate)
+                status = f"v_n={vx_world:.1f} v_e={vy_world:.1f}"
 
             # Status update
             now = time.time()
-            if now - last_print > 0.5:
+            if now - last_print > 1.0:
                 last_print = now
-                print(f"  Distance: {dist_xy:.1f}m  alt={-z:.1f}m  speed={speed:.1f}m/s", end='\r')
+                print(f"  [{phase}] dist={dist_xy:.1f}m alt={-z:.1f}m yaw={yaw_deg:.0f}° {status}")
 
             time.sleep(0.05)
 
