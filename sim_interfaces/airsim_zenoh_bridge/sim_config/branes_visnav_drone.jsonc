@@ -1,6 +1,6 @@
 {
-  // Scene configuration for visual navigation with front/back/down cameras
-  "id": "SceneVisionDrone",
+  // BranesVisualNavigationDrone configuration for visual navigation with front/back/down cameras
+  "id": "BranesVisualNavigationDrone",
   "actors": [
     {
       "type": "robot",
