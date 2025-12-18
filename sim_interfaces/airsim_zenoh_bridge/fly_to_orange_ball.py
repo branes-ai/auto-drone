@@ -173,12 +173,13 @@ class FlyToOrangeBallMission:
 
         # Control parameters
         self.forward_speed = 2.0      # m/s when target visible
-        self.yaw_gain = 1.5           # Yaw rate proportional gain
-        self.vertical_gain = 0.5      # Vertical velocity gain
+        self.yaw_gain = 0.8           # Yaw rate proportional gain (reduced to prevent overshoot)
+        self.vertical_gain = 0.3      # Vertical velocity gain
         self.approach_area = 50000    # Target area when "close enough"
         self.search_yaw_rate = 0.8    # Yaw rate when searching (rad/s)
         self.search_altitude = -10.0  # Target altitude for search (NED, negative = up)
         self.ascent_speed = 2.0       # m/s vertical speed when ascending
+        self.centering_threshold = 0.3  # Only fly forward when bearing_x < this
 
         # Detection filtering (prevent oscillation from false positives)
         self.min_detection_area = 500     # Minimum blob area to consider valid
@@ -340,18 +341,26 @@ class FlyToOrangeBallMission:
                 # Positive bearing_x = target on right = need positive yaw (turn right)
                 yaw_rate = self.yaw_gain * detection.bearing_x
 
-                # Adjust altitude to center target vertically
-                vz = self.vertical_gain * detection.bearing_y
+                # Don't adjust altitude - maintain current altitude
+                # (Vertical tracking causes descent towards ground obstacles)
+                vz = 0.0
 
-                # Forward velocity (reduce as we get closer)
-                if detection.area > self.approach_area:
+                # Only fly forward when target is reasonably centered
+                if abs(detection.bearing_x) > self.centering_threshold:
+                    # Target not centered - just rotate to center it
+                    vx = 0.0
+                    mode = "CENTERING"
+                elif detection.area > self.approach_area:
                     # Close enough - stop
                     vx = 0.0
                     target_reached = True
+                    mode = "ARRIVED"
                 else:
+                    # Target centered - fly forward
                     # Scale forward speed based on target size (closer = bigger = slower)
                     scale = max(0.2, 1.0 - detection.area / self.approach_area)
                     vx = self.forward_speed * scale
+                    mode = "APPROACHING"
 
                 self.send_velocity(vx, 0, vz, yaw_rate)
 
@@ -359,7 +368,7 @@ class FlyToOrangeBallMission:
                 if time.time() - last_status_time > 1.0:
                     last_status_time = time.time()
                     pos = self.get_position()
-                    print(f"  TRACKING: bearing=({detection.bearing_x:.2f}, {detection.bearing_y:.2f}) "
+                    print(f"  {mode}: bearing=({detection.bearing_x:.2f}, {detection.bearing_y:.2f}) "
                           f"area={detection.area} pos=({pos[0]:.1f}, {pos[1]:.1f}, {pos[2]:.1f})")
 
                 if target_reached:
