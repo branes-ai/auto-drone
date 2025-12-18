@@ -372,30 +372,76 @@ class PhasedMission:
             return None
 
     def phase4_navigate(self, target: DetectedObject) -> bool:
-        """Phase 4: Navigate to target location."""
+        """Phase 4: Navigate to target location using velocity commands."""
         print(f"\n[PHASE 4] Navigating to target...")
 
-        # Send waypoint at approach altitude
         target_z = self.approach_altitude
-        print(f"  Waypoint: ({target.world_x:.1f}, {target.world_y:.1f}, {-target_z:.1f}m)")
-        self.send_waypoint(target.world_x, target.world_y, target_z, speed=5.0)
+        print(f"  Target: ({target.world_x:.1f}, {target.world_y:.1f}, {-target_z:.1f}m)")
 
-        # Monitor progress
+        nav_speed = 5.0  # m/s
+        descent_speed = 2.0  # m/s
+        arrival_threshold = 5.0  # meters
+
         start_time = time.time()
+        last_print = 0
+
         while self.running and (time.time() - start_time) < 60.0:
             x, y, z, yaw = self.get_pose()
+
+            # Vector to target in world frame
             dx = target.world_x - x
             dy = target.world_y - y
-            dist = math.sqrt(dx*dx + dy*dy)
+            dz = target_z - z  # Target altitude
+            dist_xy = math.sqrt(dx*dx + dy*dy)
 
-            print(f"  Distance: {dist:.1f}m  pos=({x:.1f}, {y:.1f}, {-z:.1f}m)", end='\r')
-
-            if dist < 3.0:
-                print(f"\n  Arrived at target!")
+            # Check arrival
+            if dist_xy < arrival_threshold:
+                self.hover()
+                print(f"\n  Arrived at target! Distance: {dist_xy:.1f}m")
                 return True
 
-            time.sleep(0.2)
+            # Compute heading to target
+            target_heading = math.atan2(dy, dx)
 
+            # Velocity in world frame (NED)
+            speed = min(nav_speed, dist_xy)  # Slow down as we approach
+            vx_world = speed * math.cos(target_heading)
+            vy_world = speed * math.sin(target_heading)
+
+            # Altitude control - descend to approach altitude
+            if z > target_z + 1.0:
+                vz = descent_speed  # Descend (positive vz = down in NED)
+            elif z < target_z - 1.0:
+                vz = -descent_speed  # Ascend
+            else:
+                vz = 0
+
+            # Transform world velocity to body frame
+            cos_yaw = math.cos(yaw)
+            sin_yaw = math.sin(yaw)
+            vx_body = vx_world * cos_yaw + vy_world * sin_yaw
+            vy_body = -vx_world * sin_yaw + vy_world * cos_yaw
+
+            # Yaw to face target
+            yaw_error = target_heading - yaw
+            # Normalize to [-pi, pi]
+            while yaw_error > math.pi:
+                yaw_error -= 2 * math.pi
+            while yaw_error < -math.pi:
+                yaw_error += 2 * math.pi
+            yaw_rate = 1.0 * yaw_error  # P-control for yaw
+
+            self.send_velocity(vx_body, vy_body, vz, yaw_rate)
+
+            # Status update
+            now = time.time()
+            if now - last_print > 0.5:
+                last_print = now
+                print(f"  Distance: {dist_xy:.1f}m  alt={-z:.1f}m  speed={speed:.1f}m/s", end='\r')
+
+            time.sleep(0.05)
+
+        self.hover()
         print(f"\n  Navigation timeout")
         return False
 
