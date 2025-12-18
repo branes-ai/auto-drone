@@ -154,6 +154,12 @@ class FlyToOrangeBallMission:
         self.search_altitude = -10.0  # Target altitude for search (NED, negative = up)
         self.ascent_speed = 2.0       # m/s vertical speed when ascending
 
+        # Detection filtering (prevent oscillation from false positives)
+        self.min_detection_area = 500     # Minimum blob area to consider valid
+        self.detection_confirm_frames = 3  # Frames needed to confirm detection
+        self.detection_counter = 0         # Current consecutive detection count
+        self.tracking_active = False       # Whether we're in tracking mode
+
     def connect(self) -> bool:
         """Connect to Zenoh."""
         try:
@@ -287,8 +293,22 @@ class FlyToOrangeBallMission:
             detection = self.detector.detect(image)
             frames_processed += 1
 
-            # Compute velocity command
-            if detection.found:
+            # Filter detections - require minimum area and consecutive frames
+            valid_detection = detection.found and detection.area >= self.min_detection_area
+
+            # Update detection counter with hysteresis
+            if valid_detection:
+                self.detection_counter = min(self.detection_counter + 1, self.detection_confirm_frames + 5)
+                if self.detection_counter >= self.detection_confirm_frames:
+                    self.tracking_active = True
+            else:
+                self.detection_counter = max(self.detection_counter - 1, 0)
+                # Require several misses before going back to search (hysteresis)
+                if self.detection_counter == 0:
+                    self.tracking_active = False
+
+            # Compute velocity command based on tracking state
+            if self.tracking_active and valid_detection:
                 # Visual servoing: fly towards target
                 # Yaw to center target horizontally
                 yaw_rate = -self.yaw_gain * detection.bearing_x
@@ -312,7 +332,7 @@ class FlyToOrangeBallMission:
                 if time.time() - last_status_time > 1.0:
                     last_status_time = time.time()
                     pos = self.get_position()
-                    print(f"  TARGET FOUND: bearing=({detection.bearing_x:.2f}, {detection.bearing_y:.2f}) "
+                    print(f"  TRACKING: bearing=({detection.bearing_x:.2f}, {detection.bearing_y:.2f}) "
                           f"area={detection.area} pos=({pos[0]:.1f}, {pos[1]:.1f}, {pos[2]:.1f})")
 
                 if target_reached:
@@ -321,14 +341,14 @@ class FlyToOrangeBallMission:
                     break
 
             else:
-                # No target visible - rotate in place to scan horizon (front camera)
-                # This is more efficient than spiral for forward-facing cameras
+                # No confirmed target - rotate in place to scan horizon (front camera)
                 self.send_velocity(0, 0, 0, self.search_yaw_rate)
 
                 if time.time() - last_status_time > 2.0:
                     last_status_time = time.time()
                     pos = self.get_position()
-                    print(f"  Rotating search... "
+                    status = f"(detecting: {self.detection_counter}/{self.detection_confirm_frames})" if valid_detection else ""
+                    print(f"  Rotating search {status}... "
                           f"pos=({pos[0]:.1f}, {pos[1]:.1f}, {pos[2]:.1f})")
 
             # Maintain loop rate
