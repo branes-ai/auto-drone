@@ -337,7 +337,8 @@ class FlyToOrangeBallMission:
             if self.tracking_active and valid_detection:
                 # Visual servoing: fly towards target
                 # Yaw to center target horizontally
-                yaw_rate = -self.yaw_gain * detection.bearing_x
+                # Positive bearing_x = target on right = need positive yaw (turn right)
+                yaw_rate = self.yaw_gain * detection.bearing_x
 
                 # Adjust altitude to center target vertically
                 vz = self.vertical_gain * detection.bearing_y
