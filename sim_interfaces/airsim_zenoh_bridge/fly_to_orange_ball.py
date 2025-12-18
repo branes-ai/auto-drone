@@ -57,7 +57,7 @@ class TargetDetection:
 
 
 class OrangeBallDetector:
-    """Detects orange objects in RGB images using HSV color thresholding."""
+    """Detects orange ball-shaped objects in RGB images using HSV color thresholding."""
 
     def __init__(self):
         # HSV range for orange color (tuned for typical orange)
@@ -65,10 +65,19 @@ class OrangeBallDetector:
         self.hsv_lower = np.array([5, 100, 100])
         self.hsv_upper = np.array([25, 255, 255])
         self.min_area = 100  # Minimum blob area to consider
+        self.min_circularity = 0.5  # Minimum circularity to be considered ball-like
+
+    def _circularity(self, contour) -> float:
+        """Calculate circularity: 4*pi*area/perimeter^2. Circle=1, rectangle<0.8."""
+        area = cv2.contourArea(contour)
+        perimeter = cv2.arcLength(contour, True)
+        if perimeter == 0:
+            return 0
+        return 4 * math.pi * area / (perimeter * perimeter)
 
     def detect(self, image: np.ndarray) -> TargetDetection:
         """
-        Detect orange ball in BGR image.
+        Detect orange ball in BGR image, preferring circular shapes.
 
         Args:
             image: BGR image from camera (numpy array)
@@ -99,15 +108,32 @@ class OrangeBallDetector:
         if not contours:
             return result
 
-        # Find the largest orange blob
-        largest_contour = max(contours, key=cv2.contourArea)
-        area = cv2.contourArea(largest_contour)
+        # Find the most ball-like orange blob (prefer circular over rectangular)
+        best_contour = None
+        best_score = 0
 
-        if area < self.min_area:
+        for contour in contours:
+            area = cv2.contourArea(contour)
+            if area < self.min_area:
+                continue
+
+            circularity = self._circularity(contour)
+            if circularity < self.min_circularity:
+                continue  # Skip non-circular shapes (rectangles)
+
+            # Score: prefer larger and more circular
+            score = area * circularity
+            if score > best_score:
+                best_score = score
+                best_contour = contour
+
+        if best_contour is None:
             return result
 
+        area = cv2.contourArea(best_contour)
+
         # Get centroid
-        M = cv2.moments(largest_contour)
+        M = cv2.moments(best_contour)
         if M["m00"] == 0:
             return result
 
