@@ -146,12 +146,12 @@ class FlyToOrangeBallMission:
         self.topic_cmd_vel = f"robot/{robot_id}/cmd/velocity"
 
         # Control parameters
-        self.forward_speed = 1.0      # m/s when target visible
-        self.yaw_gain = 1.0           # Yaw rate proportional gain
-        self.vertical_gain = 0.5     # Vertical velocity gain
+        self.forward_speed = 2.0      # m/s when target visible
+        self.yaw_gain = 1.5           # Yaw rate proportional gain
+        self.vertical_gain = 0.5      # Vertical velocity gain
         self.approach_area = 50000    # Target area when "close enough"
-        self.search_yaw_rate = 0.5    # Yaw rate when searching (rad/s)
-        self.search_altitude = -15.0  # Target altitude for search (NED, negative = up)
+        self.search_yaw_rate = 0.8    # Yaw rate when searching (rad/s)
+        self.search_altitude = -10.0  # Target altitude for search (NED, negative = up)
         self.ascent_speed = 2.0       # m/s vertical speed when ascending
 
     def connect(self) -> bool:
@@ -231,7 +231,8 @@ class FlyToOrangeBallMission:
         print("\n" + "=" * 60)
         print("Fly to Orange Ball Mission")
         print("=" * 60)
-        print("\nUsing visual servoing to navigate to orange target")
+        print("\nUsing front camera visual servoing to navigate to orange target")
+        print(f"Search altitude: {-self.search_altitude:.0f}m")
         print(f"Timeout: {timeout}s")
         print("=" * 60 + "\n")
 
@@ -320,21 +321,14 @@ class FlyToOrangeBallMission:
                     break
 
             else:
-                # No target visible - search using expanding spiral pattern
-                # With down-camera, we need to move horizontally to see different areas
-                elapsed = time.time() - start_time
-                search_radius = 1.0 + elapsed * 0.1  # Expanding radius over time
-                search_angle = elapsed * 0.5  # Rotate around center
-
-                # Spiral outward from start position
-                vx = math.cos(search_angle) * min(search_radius, 2.0) * 0.3
-                vy = math.sin(search_angle) * min(search_radius, 2.0) * 0.3
-                self.send_velocity(vx, vy, 0, self.search_yaw_rate)
+                # No target visible - rotate in place to scan horizon (front camera)
+                # This is more efficient than spiral for forward-facing cameras
+                self.send_velocity(0, 0, 0, self.search_yaw_rate)
 
                 if time.time() - last_status_time > 2.0:
                     last_status_time = time.time()
                     pos = self.get_position()
-                    print(f"  Spiral search (r={search_radius:.1f}m)... "
+                    print(f"  Rotating search... "
                           f"pos=({pos[0]:.1f}, {pos[1]:.1f}, {pos[2]:.1f})")
 
             # Maintain loop rate
@@ -372,7 +366,7 @@ def main():
     parser.add_argument("--robot-id", default="drone", help="Robot ID (default: drone)")
     parser.add_argument("--timeout", type=float, default=120.0, help="Mission timeout in seconds")
     parser.add_argument("--speed", type=float, default=1.0, help="Forward speed m/s (default: 1.0)")
-    parser.add_argument("--altitude", type=float, default=15.0, help="Search altitude in meters (default: 15)")
+    parser.add_argument("--altitude", type=float, default=10.0, help="Search altitude in meters (default: 10)")
 
     args = parser.parse_args()
 

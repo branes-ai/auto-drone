@@ -241,18 +241,8 @@ class AirSimZenohBridge:
             if hasattr(self.drone, 'sensors'):
                 print(f"  Available sensors: {list(self.drone.sensors.keys())}")
 
-                # Try DownCamera first (used in hello_drone.py example)
-                if "DownCamera" in self.drone.sensors:
-                    cam = self.drone.sensors["DownCamera"]
-                    if "scene_camera" in cam:
-                        self.client.subscribe(cam["scene_camera"], on_rgb_image)
-                        print(f"    Subscribed to DownCamera RGB")
-                    if "depth_camera" in cam:
-                        self.client.subscribe(cam["depth_camera"], on_depth_image)
-                        print(f"    Subscribed to DownCamera Depth")
-
-                # Also try FrontCamera if available
-                elif "FrontCamera" in self.drone.sensors:
+                # Prefer FrontCamera for visual navigation (forward-facing view)
+                if "FrontCamera" in self.drone.sensors:
                     cam = self.drone.sensors["FrontCamera"]
                     if "scene_camera" in cam:
                         self.client.subscribe(cam["scene_camera"], on_rgb_image)
@@ -260,6 +250,16 @@ class AirSimZenohBridge:
                     if "depth_camera" in cam:
                         self.client.subscribe(cam["depth_camera"], on_depth_image)
                         print(f"    Subscribed to FrontCamera Depth")
+
+                # Fallback to DownCamera if no FrontCamera
+                elif "DownCamera" in self.drone.sensors:
+                    cam = self.drone.sensors["DownCamera"]
+                    if "scene_camera" in cam:
+                        self.client.subscribe(cam["scene_camera"], on_rgb_image)
+                        print(f"    Subscribed to DownCamera RGB")
+                    if "depth_camera" in cam:
+                        self.client.subscribe(cam["depth_camera"], on_depth_image)
+                        print(f"    Subscribed to DownCamera Depth")
                 else:
                     print("  Warning: No recognized camera found in sensors")
 

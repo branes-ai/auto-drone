@@ -1,0 +1,32 @@
+{
+  // Scene configuration for visual navigation with front/back/down cameras
+  "id": "SceneVisionDrone",
+  "actors": [
+    {
+      "type": "robot",
+      "name": "Drone1",
+      "origin": {
+        "xyz": "-1.0 8.0 -4.0",
+        "rpy-deg": "0 0 -45"
+      },
+      "robot-config": "robot_quadrotor_vision.jsonc"
+    }
+  ],
+  "clock": {
+    "type": "steppable",
+    "step-ns": 3000000,
+    "real-time-update-rate": 3000000,
+    "pause-on-start": false
+  },
+  "home-geo-point": {
+    "latitude": 47.641468,
+    "longitude": -122.140165,
+    "altitude": 122.0
+  },
+  "segmentation": {
+    "initialize-ids": true,
+    "ignore-existing": false,
+    "use-owner-name": true
+  },
+  "scene-type": "UnrealNative"
+}
