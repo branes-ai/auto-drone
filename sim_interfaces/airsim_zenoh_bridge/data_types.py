@@ -5,9 +5,10 @@ All binary formats use little-endian byte order to match the C++ implementation.
 """
 
 import struct
-from dataclasses import dataclass
+import json
+from dataclasses import dataclass, field, asdict
 from enum import IntEnum
-from typing import Optional
+from typing import Optional, List
 import numpy as np
 
 
@@ -295,3 +296,133 @@ class WaypointList:
             offset += Waypoint.SERIALIZED_SIZE
 
         return cls(waypoints=waypoints, timestamp_us=timestamp_us)
+
+
+# =============================================================================
+# YOLO Detection Data Types (JSON serialization for flexibility)
+# =============================================================================
+
+@dataclass
+class Detection:
+    """
+    Single object detection from YOLO-World or similar detector.
+
+    Uses JSON serialization for flexibility and debuggability.
+    """
+    class_id: int               # Index into prompt/class list
+    class_name: str             # The class/prompt name (e.g., "orange ball")
+    confidence: float           # Detection confidence 0.0-1.0
+
+    # Bounding box (pixels)
+    bbox_x: int                 # Top-left X
+    bbox_y: int                 # Top-left Y
+    bbox_w: int                 # Width
+    bbox_h: int                 # Height
+
+    # Derived values
+    center_x: int = 0           # Bbox center X
+    center_y: int = 0           # Bbox center Y
+    area: int = 0               # Bbox area in pixels
+
+    # Normalized bearing for control (-1 to +1)
+    bearing_x: float = 0.0      # Horizontal: -1=left, 0=center, +1=right
+    bearing_y: float = 0.0      # Vertical: -1=top, 0=center, +1=bottom
+
+    def __post_init__(self):
+        """Compute derived values if not provided."""
+        if self.center_x == 0 and self.bbox_w > 0:
+            self.center_x = self.bbox_x + self.bbox_w // 2
+        if self.center_y == 0 and self.bbox_h > 0:
+            self.center_y = self.bbox_y + self.bbox_h // 2
+        if self.area == 0:
+            self.area = self.bbox_w * self.bbox_h
+
+    def to_dict(self) -> dict:
+        """Convert to dictionary."""
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, d: dict) -> 'Detection':
+        """Create from dictionary."""
+        return cls(**d)
+
+
+@dataclass
+class DetectionList:
+    """
+    All detections from a single frame.
+
+    Uses JSON serialization for flexibility.
+    """
+    timestamp_us: int                           # Microseconds since epoch
+    frame_id: int                               # Sequential frame number
+    image_width: int                            # Source image width
+    image_height: int                           # Source image height
+    inference_time_ms: float                    # Model inference time
+    detections: List[Detection] = field(default_factory=list)
+
+    def serialize(self) -> bytes:
+        """Serialize to JSON bytes."""
+        data = {
+            'timestamp_us': self.timestamp_us,
+            'frame_id': self.frame_id,
+            'image_width': self.image_width,
+            'image_height': self.image_height,
+            'inference_time_ms': self.inference_time_ms,
+            'detections': [d.to_dict() for d in self.detections]
+        }
+        return json.dumps(data).encode('utf-8')
+
+    @classmethod
+    def deserialize(cls, payload: bytes) -> 'DetectionList':
+        """Deserialize from JSON bytes."""
+        data = json.loads(payload.decode('utf-8'))
+        detections = [Detection.from_dict(d) for d in data.get('detections', [])]
+        return cls(
+            timestamp_us=data['timestamp_us'],
+            frame_id=data['frame_id'],
+            image_width=data['image_width'],
+            image_height=data['image_height'],
+            inference_time_ms=data['inference_time_ms'],
+            detections=detections
+        )
+
+    def get_by_class(self, class_name: str) -> List[Detection]:
+        """Filter detections by class name (case-insensitive)."""
+        class_lower = class_name.lower()
+        return [d for d in self.detections if d.class_name.lower() == class_lower]
+
+    def get_best(self, class_name: str) -> Optional[Detection]:
+        """Get highest confidence detection of given class."""
+        matches = self.get_by_class(class_name)
+        return max(matches, key=lambda d: d.confidence) if matches else None
+
+    def get_largest(self, class_name: str) -> Optional[Detection]:
+        """Get largest (by area) detection of given class."""
+        matches = self.get_by_class(class_name)
+        return max(matches, key=lambda d: d.area) if matches else None
+
+
+@dataclass
+class DetectorConfig:
+    """
+    Configuration for YOLO-World detector.
+
+    Uses JSON serialization for flexibility.
+    """
+    prompts: List[str] = field(default_factory=lambda: ["orange ball"])
+    confidence_threshold: float = 0.25
+    nms_threshold: float = 0.45
+    max_detections: int = 20
+    publish_annotated: bool = False
+    target_fps: float = 10.0
+
+    def serialize(self) -> bytes:
+        """Serialize to JSON bytes."""
+        return json.dumps(asdict(self)).encode('utf-8')
+
+    @classmethod
+    def deserialize(cls, payload: bytes) -> 'DetectorConfig':
+        """Deserialize from JSON bytes."""
+        data = json.loads(payload.decode('utf-8'))
+        return cls(**data)
