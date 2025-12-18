@@ -93,6 +93,9 @@ class AirSimZenohBridge:
         self.topic_odom = f"robot/{config.robot_id}/sensor/state/odom"
         self.topic_cmd_vel = f"robot/{config.robot_id}/cmd/velocity"
 
+        # Multi-camera topics (new format)
+        self.camera_topics = {}  # camera_id -> topic string
+
         # Sensor data from subscriptions
         self.latest_rgb = None
         self.latest_depth = None
@@ -100,6 +103,11 @@ class AirSimZenohBridge:
         self.rgb_lock = threading.Lock()
         self.depth_lock = threading.Lock()
         self.odom_lock = threading.Lock()
+
+        # Multi-camera support: per-camera image storage
+        self.camera_images = {}  # camera_id -> numpy array
+        self.camera_locks = {}   # camera_id -> threading.Lock
+        self.camera_publishers = {}  # camera_id -> zenoh publisher
 
     async def connect_airsim(self) -> bool:
         """Connect to Project AirSim."""
@@ -144,7 +152,37 @@ class AirSimZenohBridge:
     def _setup_sensor_subscriptions(self):
         """Set up subscriptions to sensor feeds from Project AirSim."""
 
-        # Callback for RGB camera
+        def make_camera_callback(camera_id: str):
+            """Create a callback for a specific camera."""
+            def on_camera_image(topic, image_data):
+                try:
+                    if isinstance(image_data, dict) and 'data' in image_data:
+                        height = image_data.get('height', 0)
+                        width = image_data.get('width', 0)
+                        encoding = image_data.get('encoding', 'BGR')
+                        raw_data = image_data.get('data', b'')
+
+                        if height > 0 and width > 0 and raw_data:
+                            img = np.frombuffer(raw_data, dtype=np.uint8)
+                            channels = 3 if encoding in ('BGR', 'RGB') else 1
+                            img = img.reshape(height, width, channels)
+
+                            # Store in per-camera dict
+                            if camera_id in self.camera_locks:
+                                with self.camera_locks[camera_id]:
+                                    self.camera_images[camera_id] = img
+
+                            # Also store in legacy single-camera slot for backwards compat
+                            # (front camera takes priority)
+                            if camera_id == "front" or self.latest_rgb is None:
+                                with self.rgb_lock:
+                                    self.latest_rgb = img
+                except Exception as e:
+                    if self.stats['rgb_frames'] == 0:
+                        print(f"  Error parsing {camera_id} RGB: {e}")
+            return on_camera_image
+
+        # Legacy callback for single-camera compatibility
         def on_rgb_image(topic, image_data):
             try:
                 # Project AirSim sends image as dict:
@@ -237,31 +275,41 @@ class AirSimZenohBridge:
             # Project AirSim uses drone.sensors and drone.robot_info for topics
             print(f"  Setting up sensor subscriptions...")
 
-            # Subscribe to cameras
+            # Camera name mapping: Project AirSim name -> short name for topics
+            camera_name_map = {
+                "FrontCamera": "front",
+                "BackCamera": "back",
+                "DownCamera": "down",
+            }
+
+            # Subscribe to ALL available cameras
             if hasattr(self.drone, 'sensors'):
                 print(f"  Available sensors: {list(self.drone.sensors.keys())}")
 
-                # Prefer FrontCamera for visual navigation (forward-facing view)
-                if "FrontCamera" in self.drone.sensors:
-                    cam = self.drone.sensors["FrontCamera"]
-                    if "scene_camera" in cam:
-                        self.client.subscribe(cam["scene_camera"], on_rgb_image)
-                        print(f"    Subscribed to FrontCamera RGB")
-                    if "depth_camera" in cam:
-                        self.client.subscribe(cam["depth_camera"], on_depth_image)
-                        print(f"    Subscribed to FrontCamera Depth")
+                cameras_found = []
+                for airsim_name, short_name in camera_name_map.items():
+                    if airsim_name in self.drone.sensors:
+                        cam = self.drone.sensors[airsim_name]
 
-                # Fallback to DownCamera if no FrontCamera
-                elif "DownCamera" in self.drone.sensors:
-                    cam = self.drone.sensors["DownCamera"]
-                    if "scene_camera" in cam:
-                        self.client.subscribe(cam["scene_camera"], on_rgb_image)
-                        print(f"    Subscribed to DownCamera RGB")
-                    if "depth_camera" in cam:
-                        self.client.subscribe(cam["depth_camera"], on_depth_image)
-                        print(f"    Subscribed to DownCamera Depth")
-                else:
-                    print("  Warning: No recognized camera found in sensors")
+                        # Set up per-camera storage
+                        self.camera_locks[short_name] = threading.Lock()
+                        self.camera_images[short_name] = None
+                        self.camera_topics[short_name] = f"robot/{self.config.robot_id}/sensor/camera/{short_name}/rgb"
+
+                        # Subscribe to RGB
+                        if "scene_camera" in cam:
+                            callback = make_camera_callback(short_name)
+                            self.client.subscribe(cam["scene_camera"], callback)
+                            cameras_found.append(short_name)
+                            print(f"    Subscribed to {airsim_name} RGB -> {self.camera_topics[short_name]}")
+
+                        # Subscribe to depth (only for front camera for now)
+                        if short_name == "front" and "depth_camera" in cam:
+                            self.client.subscribe(cam["depth_camera"], on_depth_image)
+                            print(f"    Subscribed to {airsim_name} Depth")
+
+                if not cameras_found:
+                    print("  Warning: No recognized cameras found in sensors")
 
             # Subscribe to pose/odometry via robot_info
             if hasattr(self.drone, 'robot_info'):
@@ -296,13 +344,18 @@ class AirSimZenohBridge:
             self.zenoh_session = zenoh.open(zenoh_config)
             print("Zenoh session opened successfully")
 
-            # Create publishers
+            # Create publishers for legacy single-camera topics
             self.pub_rgb = self.zenoh_session.declare_publisher(self.topic_rgb)
             self.pub_depth = self.zenoh_session.declare_publisher(self.topic_depth)
             self.pub_odom = self.zenoh_session.declare_publisher(self.topic_odom)
             print(f"  Publishing RGB to: {self.topic_rgb}")
             print(f"  Publishing Depth to: {self.topic_depth}")
             print(f"  Publishing Odometry to: {self.topic_odom}")
+
+            # Create publishers for per-camera topics
+            for camera_id, topic in self.camera_topics.items():
+                self.camera_publishers[camera_id] = self.zenoh_session.declare_publisher(topic)
+                print(f"  Publishing {camera_id} camera to: {topic}")
 
             # Create subscriber for velocity commands
             self.sub_cmd_vel = self.zenoh_session.declare_subscriber(
@@ -366,9 +419,20 @@ class AirSimZenohBridge:
                 self.latest_odom = None
 
     def _publish_rgb(self):
-        """Publish RGB image to Zenoh."""
+        """Publish RGB images to Zenoh (legacy single topic + per-camera topics)."""
         try:
-            # Check if we have subscribed image data
+            # Publish per-camera images to new multi-camera topics
+            for camera_id, lock in self.camera_locks.items():
+                with lock:
+                    if self.camera_images.get(camera_id) is not None:
+                        img_data = self.camera_images[camera_id]
+                        self.camera_images[camera_id] = None  # Consume it
+
+                        if isinstance(img_data, np.ndarray) and camera_id in self.camera_publishers:
+                            image_data = ImageData.from_numpy(img_data, ImageEncoding.BGR8)
+                            self.camera_publishers[camera_id].put(image_data.serialize())
+
+            # Also publish to legacy single topic for backwards compatibility
             with self.rgb_lock:
                 if self.latest_rgb is not None:
                     img_data = self.latest_rgb
