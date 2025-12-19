@@ -8,6 +8,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Mission Orchestrator Architecture**
+  - `docs/architecture-mission-orchestrator.md` - Comprehensive design document for mission orchestration
+    - YAML-based mission configuration schema
+    - Phase Library design with reusable mission phases (Search, Track, Approach, Land, etc.)
+    - Recording service integration
+    - Comparison: Behavior Trees vs LLM/VLM planning vs Hybrid approaches
+    - VLA (Vision-Language-Action) research summary: UAV-VLA, CognitiveDrone
+    - Evolution roadmap: YAML Config → Behavior Trees → LLM+BT Hybrid
+
+- **Mission Recording Service**
+  - `sim_interfaces/airsim_zenoh_bridge/record_mission.py` - Video recording of drone missions
+    - Single camera recording (front, back, down, chase)
+    - Multi-view layouts: `side_by_side` (2 cameras), `grid` (2x2 for 4 cameras)
+    - Auto-layout selection based on camera count
+    - Configurable FPS, resolution, duration limit
+    - Automatic H.264 conversion via ffmpeg if available
+    - Timestamp overlay on recorded video
+
+- **YOLO-World Object Detection**
+  - `docs/architecture-yolo-world-detection.md` - Architecture for zero-shot object detection
+  - `yolo_world_detector.py` - Single camera YOLO-World detector node
+    - Subscribes to camera RGB, publishes detections
+    - Runtime prompt changes via config topic
+    - Configurable confidence threshold and target FPS
+  - `yolo_multi_camera_detector.py` - Multi-camera YOLO detector
+    - Processes front, back, down cameras simultaneously
+    - Per-camera detection prompts
+    - Camera geometry metadata in detections
+
+- **Multi-Camera Detection Architecture**
+  - `docs/architecture-multi-camera-detection.md` - 8 key capabilities document
+    - Efficient scanning (180° rotation for 360° coverage)
+    - Continuous tracking with camera handoff
+    - Lost target recovery via rear camera
+    - Down camera precision for terminal approach
+    - Detection triangulation concepts
+
+- **Multi-Camera Mission**
+  - `fly_to_orange_ball_multicam.py` - Orange ball tracking with camera handoff
+    - Phase 2: 180° scan using front+back cameras
+    - Phase 6: Automatic front→down camera handoff during terminal approach
+    - Per-camera detection subscriptions
+
+- **Detection Data Types**
+  - `data_types.py` additions:
+    - `Detection` - Single object detection with bbox, confidence, bearing
+    - `DetectionList` - Frame detections with helper methods (get_by_class, get_best, get_largest)
+    - `CameraDetectionList` - Extends DetectionList with camera geometry
+    - `DetectorConfig` - Detector configuration (prompts, thresholds, FPS)
+
+### Changed
+- **AirSim Bridge Multi-Camera Support**
+  - Bridge now publishes all cameras to per-camera topics: `robot/{id}/sensor/camera/{cam}/rgb`
+  - Camera name mapping: FrontCamera→front, BackCamera→back, DownCamera→down, Chase→chase
+  - Chase camera (external 3rd-person view) now supported for recording
+
 - **Phase 4: Obstacle Avoidance**
   - `libs/data_types/ProximityData` - 6-direction proximity sensor data type
     - Front/back/left/right/up/down distances (32 bytes serialized)
