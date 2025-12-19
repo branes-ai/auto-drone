@@ -280,6 +280,7 @@ class AirSimZenohBridge:
                 "FrontCamera": "front",
                 "BackCamera": "back",
                 "DownCamera": "down",
+                "Chase": "chase",  # External 3rd-person chase camera
             }
 
             # Subscribe to ALL available cameras

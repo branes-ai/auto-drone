@@ -68,3 +68,51 @@ python yolo_multi_camera_detector.py --connect tcp/192.168.1.10:7447 \
   # Terminal 3: Mission
   python fly_to_orange_ball_multicam.py --connect tcp/192.168.1.10:7447
 
+
+----------------------------------------
+
+
+The recording service (record_mission.py) is complete with full support for both single camera and multi-view layouts:
+
+  Features implemented:
+  - Single camera recording: Chase camera for cinematic 3rd-person view, or any camera (front, back, down)
+  - Multi-view layouts:
+    - side_by_side - Two cameras horizontally (e.g., chase + front)
+    - grid - 2x2 layout for up to 4 cameras
+  - Auto-layout selection: Automatically picks layout based on camera count
+  - Configurable output: FPS, resolution, duration limit
+  - H.264 conversion: Uses ffmpeg if available for better compression
+
+  Usage examples:
+# Record chase camera (cinematic 3rd person view)
+python record_mission.py --connect tcp/192.168.1.10:7447 --camera chase
+
+# Multi-view: 2x2 grid of all cameras
+python record_mission.py --connect tcp/192.168.1.10:7447 \
+      --cameras front back down chase --layout grid
+
+# Side-by-side: chase + front
+python record_mission.py --connect tcp/192.168.1.10:7447 \
+      --cameras chase front --layout side_by_side
+
+# With duration limit
+python record_mission.py --connect tcp/192.168.1.10:7447 \
+      --camera chase --duration 120 --output mission.mp4
+
+The recording service runs as a separate process alongside your mission. 
+Start recording, run your mission, then Ctrl+C to stop and save the video.
+
+Added chase camera support to the bridge. The change at airsim_zenoh_bridge.py:283 maps 
+the "Chase" sensor ID to the "chase" topic.
+
+  To use it:
+  1. Restart the bridge to pick up the change
+  2. Make sure your robot config has the Chase camera sensor defined (e.g., robot_quadrotor_vision.jsonc or
+  robot_quadrotor_fastphysics_chase.jsonc)
+
+  When the bridge starts, you should now see:
+      Subscribed to Chase RGB -> robot/drone/sensor/camera/chase/rgb
+
+  Then recording will work:
+  python record_mission.py --connect tcp/localhost:7447 --camera chase
+
