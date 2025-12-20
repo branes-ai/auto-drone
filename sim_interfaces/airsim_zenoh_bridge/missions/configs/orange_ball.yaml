@@ -1,0 +1,81 @@
+# Orange Ball Tracking Mission
+#
+# Multi-camera mission to locate and approach an orange ball.
+# Uses front+back cameras for efficient 180° scanning and
+# down camera for precision terminal approach.
+#
+# Usage:
+#   python run_mission.py --connect tcp/localhost:7447 --config orange_ball.yaml
+#   python run_mission.py --connect tcp/localhost:7447 --config orange_ball.yaml --altitude 30
+
+name: orange_ball_multicam
+description: Find and fly to an orange ball using multi-camera detection
+
+# Connection
+robot_id: drone
+
+# Cameras to use (detector must be publishing to these topics)
+cameras:
+  - front
+  - back
+  - down
+
+# Target specification
+target_class: "orange ball"
+
+# Altitude parameters (positive meters)
+observation_altitude: 25.0   # Height for scanning
+approach_altitude: 5.0       # Height for final approach
+
+# Speed parameters
+ascent_speed: 3.0            # m/s vertical climb
+descent_speed: 2.0           # m/s vertical descent
+nav_speed: 5.0               # m/s horizontal navigation
+approach_speed: 2.0          # m/s during final approach
+scan_yaw_rate: 0.5           # rad/s rotation during scan
+
+# Distance thresholds
+descent_threshold: 10.0      # Start descent when within XY distance (m)
+arrival_distance: 3.0        # Mission complete when this close (m)
+camera_handoff_distance: 8.0 # Switch to down camera (m)
+
+# Timeouts
+mission_timeout: 180.0       # Total mission timeout (s)
+phase_timeout: 60.0          # Per-phase timeout (s)
+
+# Phase sequence
+phases:
+  # Phase 1: Rise to observation altitude
+  - type: ascend
+    name: "Ascend to observation altitude"
+    params: {}
+
+  # Phase 2: Rotate to scan for targets
+  # With front+back cameras, 180° gives 360° coverage
+  - type: scan
+    name: "Scan for targets"
+    params:
+      rotation_degrees: 180
+
+  # Phase 3: Select best target from inventory
+  - type: select
+    name: "Select target"
+    params:
+      strategy: best_confidence
+      min_confidence: 0.3
+
+  # Phase 4: Fly toward target at cruise altitude
+  - type: navigate
+    name: "Navigate to target"
+    params: {}
+
+  # Phase 5: Descend to approach altitude
+  - type: descend
+    name: "Descend"
+    params: {}
+
+  # Phase 6: Final approach with visual servoing
+  - type: approach
+    name: "Final approach"
+    params:
+      use_down_camera: true
