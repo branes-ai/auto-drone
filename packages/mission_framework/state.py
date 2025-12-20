@@ -10,10 +10,16 @@ from dataclasses import dataclass, field
 from threading import Lock
 from typing import Optional, List, Dict, Any
 
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent))
-from data_types import Odometry
+# Import Odometry from data_types (in sim_interfaces/airsim_zenoh_bridge/)
+# Ensure PYTHONPATH includes that directory, or run from project root
+try:
+    from data_types import Odometry
+except ImportError:
+    # Fallback: try relative import for when running from airsim_zenoh_bridge
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).parent.parent.parent / "sim_interfaces" / "airsim_zenoh_bridge"))
+    from data_types import Odometry
 
 
 @dataclass

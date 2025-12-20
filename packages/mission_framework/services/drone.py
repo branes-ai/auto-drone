@@ -10,10 +10,14 @@ from typing import Optional, TYPE_CHECKING
 
 import zenoh
 
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-from data_types import Odometry, VelocityCommand, CommandPriority, CommandSource
+# Import data types (in sim_interfaces/airsim_zenoh_bridge/)
+try:
+    from data_types import Odometry, VelocityCommand, CommandPriority, CommandSource
+except ImportError:
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "sim_interfaces" / "airsim_zenoh_bridge"))
+    from data_types import Odometry, VelocityCommand, CommandPriority, CommandSource
 
 if TYPE_CHECKING:
     from ..state import MissionState

@@ -12,7 +12,7 @@ Usage:
 Examples:
     # Run with config file
     python run_mission.py --connect tcp/192.168.1.10:7447 \\
-        --config missions/configs/orange_ball.yaml
+        --config orange_ball.yaml
 
     # Override altitude
     python run_mission.py --connect tcp/localhost:7447 \\
@@ -31,17 +31,23 @@ import asyncio
 import sys
 from pathlib import Path
 
-# Add parent directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent))
+# Add paths for imports
+_this_dir = Path(__file__).parent
+_project_root = _this_dir.parent.parent
+sys.path.insert(0, str(_this_dir))  # For data_types
+sys.path.insert(0, str(_project_root / "packages"))  # For mission_framework
 
-from missions.config import MissionConfig
-from missions.runner import MissionRunner
+from mission_framework.config import MissionConfig
+from mission_framework.runner import MissionRunner
 
 # Import phases to trigger registration
-from missions.phases import (
+from mission_framework.phases import (
     ascend, scan, select, navigate, descend, approach, land
 )
-from missions.phases import list_phases
+from mission_framework.phases import list_phases
+
+# Default config location
+DEFAULT_CONFIG_DIR = _project_root / "packages" / "mission_framework" / "configs"
 
 
 def main():
@@ -51,8 +57,7 @@ def main():
         epilog="""
 Examples:
   # Run orange ball mission with config file
-  python run_mission.py --connect tcp/localhost:7447 \\
-      --config missions/configs/orange_ball.yaml
+  python run_mission.py --connect tcp/localhost:7447 --config orange_ball.yaml
 
   # Override observation altitude
   python run_mission.py --connect tcp/localhost:7447 \\
@@ -100,12 +105,14 @@ Available phases: """ + ", ".join(list_phases())
     if args.config:
         config_path = Path(args.config)
         if not config_path.exists():
-            # Try missions/configs/ directory
-            alt_path = Path(__file__).parent / "missions" / "configs" / args.config
+            # Try default config directory
+            alt_path = DEFAULT_CONFIG_DIR / args.config
             if alt_path.exists():
                 config_path = alt_path
             else:
                 print(f"ERROR: Config file not found: {args.config}")
+                print(f"  Searched: {args.config}")
+                print(f"  Searched: {alt_path}")
                 return 1
 
         config = MissionConfig.from_yaml(config_path)
