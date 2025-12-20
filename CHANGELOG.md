@@ -8,6 +8,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Mission Framework Package** (`packages/mission_framework/`)
+  - Reusable Phase Library for drone mission orchestration
+  - YAML-based mission configuration with CLI overrides
+  - **Core Components:**
+    - `MissionRunner` - Async orchestrator for phase execution
+    - `MissionConfig` - Configuration schema with YAML loading
+    - `MissionState` - Thread-safe shared state (odometry, targets, inventory)
+    - `TrackedObject` / `ObjectInventory` - Detection tracking with world position estimation
+  - **Services:**
+    - `DroneService` - Odometry subscription, velocity command publishing
+    - `DetectionService` - Multi-camera detection aggregation
+  - **Phases (7 reusable):**
+    - `ascend` - Rise to observation altitude
+    - `scan` - 180°/360° rotation with detection accumulation
+    - `select` - Choose best target from inventory
+    - `navigate` - Cruise to target at altitude
+    - `descend` - Drop to approach altitude
+    - `approach` - Visual servoing with camera handoff
+    - `hover` / `land` - Station keeping and landing
+  - **CLI:** `run_mission.py --connect <endpoint> --config <yaml>`
+  - Example config: `packages/mission_framework/configs/orange_ball.yaml`
+
 - **Mission Orchestrator Architecture**
   - `docs/architecture-mission-orchestrator.md` - Comprehensive design document for mission orchestration
     - YAML-based mission configuration schema
