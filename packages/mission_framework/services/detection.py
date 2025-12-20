@@ -11,10 +11,14 @@ from typing import Optional, Dict, List, TYPE_CHECKING
 
 import zenoh
 
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-from data_types import DetectionList, CameraDetectionList, Detection
+# Import data types (in sim_interfaces/airsim_zenoh_bridge/)
+try:
+    from data_types import DetectionList, CameraDetectionList, Detection
+except ImportError:
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "sim_interfaces" / "airsim_zenoh_bridge"))
+    from data_types import DetectionList, CameraDetectionList, Detection
 
 if TYPE_CHECKING:
     from ..state import MissionState
