@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Orange Ball Mission - Simple Sequential Mission
+
+  This behavior tree executes a complete "find and approach orange ball" mission
+  by calling Python phases in sequence. Each PhaseAction node sends an RPC request
+  to the Python phase server and waits for completion.
+
+  Phases:
+    1. ascend - Rise to observation altitude
+    2. scan - Rotate to find objects, build inventory
+    3. select - Choose best target from inventory
+    4. navigate - Fly toward target at cruise altitude
+    5. descend - Lower to approach altitude
+    6. approach - Final visual servoing approach
+-->
+<root BTCPP_format="4">
+    <BehaviorTree ID="OrangeBallMission">
+        <Sequence name="main_sequence">
+            <!-- Phase 1: Ascend to observation altitude -->
+            <PhaseAction phase_name="ascend"
+                         params="{}"
+                         timeout_sec="60"
+                         result_status="{ascend_status}"
+                         result_data="{ascend_data}"
+                         result_message="{ascend_message}"/>
+
+            <!-- Phase 2: Scan for targets (180 degrees with front+back cameras) -->
+            <PhaseAction phase_name="scan"
+                         params='{"rotation_degrees": 180}'
+                         timeout_sec="90"
+                         result_status="{scan_status}"
+                         result_data="{scan_data}"
+                         result_message="{scan_message}"/>
+
+            <!-- Phase 3: Select best target from inventory -->
+            <PhaseAction phase_name="select"
+                         params='{"strategy": "best_confidence", "min_confidence": 0.3}'
+                         timeout_sec="10"
+                         result_status="{select_status}"
+                         result_data="{select_data}"
+                         result_message="{select_message}"/>
+
+            <!-- Verify target was selected before continuing -->
+            <HasTarget/>
+
+            <!-- Phase 4: Navigate to target area -->
+            <PhaseAction phase_name="navigate"
+                         params="{}"
+                         timeout_sec="120"
+                         result_status="{nav_status}"
+                         result_data="{nav_data}"
+                         result_message="{nav_message}"/>
+
+            <!-- Phase 5: Descend to approach altitude -->
+            <PhaseAction phase_name="descend"
+                         params="{}"
+                         timeout_sec="60"
+                         result_status="{descend_status}"
+                         result_data="{descend_data}"
+                         result_message="{descend_message}"/>
+
+            <!-- Phase 6: Final approach with visual servoing -->
+            <PhaseAction phase_name="approach"
+                         params='{"use_down_camera": true}'
+                         timeout_sec="60"
+                         result_status="{approach_status}"
+                         result_data="{approach_data}"
+                         result_message="{approach_message}"/>
+        </Sequence>
+    </BehaviorTree>
+</root>
