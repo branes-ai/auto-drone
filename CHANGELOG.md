@@ -8,6 +8,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Behavior Tree Integration** (`libs/behavior_tree/`)
+  - BehaviorTree.CPP v4.6 integration for complex mission orchestration
+  - Zenoh-only communication (no ZeroMQ/Groot2 to keep stack clean)
+  - **Condition Nodes:**
+    - `HasTarget` - Check if target is selected
+    - `HasDetections` - Check if objects detected (with min_count)
+    - `CheckAltitude` - Check if at target altitude (with tolerance)
+    - `CheckDistance` - Check if within distance threshold
+    - `CheckMinAltitude` - Check if above minimum altitude
+    - `IsMissionRunning` - Check mission active flag
+  - **Action Nodes:**
+    - `PhaseAction` - Execute Python phases via Zenoh RPC
+  - **Support Classes:**
+    - `BlackboardSync` - Sync Zenoh state with BT blackboard
+    - `FactoryConfig` - Configure factory with Zenoh session
+  - **XML Trees:**
+    - `orange_ball_mission.xml` - Simple sequential mission
+    - `robust_mission.xml` - With fallbacks, retries, conditional logic
+  - 8 unit tests for condition nodes
+
+- **BT Bridge** (`packages/mission_framework/bt_bridge/`)
+  - `PhaseServer` - Executes Python phases on Zenoh RPC requests
+  - `StatePublisher` - Publishes MissionState to Zenoh for C++ blackboard
+  - `run_server.py` - Entry point for Python phase server
+  - Enables C++ behavior trees to orchestrate existing Python phases
+
+- **Behavior Tree Demo** (`demos/05_behavior_tree/`)
+  - `bt_mission_runner` - Loads and executes XML behavior trees
+  - Connects to Python phase server via Zenoh
+  - Supports configurable tick rate and robot ID
+
 - **Mission Framework Package** (`packages/mission_framework/`)
   - Reusable Phase Library for drone mission orchestration
   - YAML-based mission configuration with CLI overrides
