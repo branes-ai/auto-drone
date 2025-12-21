@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Robust Orange Ball Mission - With Fallbacks and Retries
+
+  This behavior tree demonstrates advanced BT patterns:
+    - RetryNode: Retry failed phases up to N times
+    - Fallback: Try alternatives if primary approach fails
+    - Conditions: Check state before proceeding
+
+  Recovery strategies:
+    - Ascend retries up to 3 times on failure
+    - Scan fallback: try 180° first, then 360° if no detections
+    - Selection fallback: try best_confidence, then largest
+    - Approach retries up to 2 times
+-->
+<root BTCPP_format="4">
+    <BehaviorTree ID="RobustOrangeBallMission">
+        <Sequence name="mission_with_recovery">
+
+            <!-- Phase 1: Ascend with retry on failure -->
+            <RetryNode num_attempts="3" name="ascend_retry">
+                <PhaseAction phase_name="ascend"
+                             params="{}"
+                             timeout_sec="60"
+                             result_status="{ascend_status}"/>
+            </RetryNode>
+
+            <!-- Phase 2: Search with fallback strategies -->
+            <Fallback name="search_fallback">
+                <!-- Try quick 180° scan first (faster with front+back cameras) -->
+                <Sequence name="quick_scan">
+                    <PhaseAction phase_name="scan"
+                                 params='{"rotation_degrees": 180}'
+                                 timeout_sec="60"
+                                 result_status="{scan_status}"/>
+                    <HasDetections min_count="1"/>
+                </Sequence>
+
+                <!-- If quick scan found nothing, try full 360° rotation -->
+                <Sequence name="full_scan">
+                    <PhaseAction phase_name="scan"
+                                 params='{"rotation_degrees": 360}'
+                                 timeout_sec="120"
+                                 result_status="{scan_status}"/>
+                    <HasDetections min_count="1"/>
+                </Sequence>
+            </Fallback>
+
+            <!-- Phase 3: Target selection with fallback strategies -->
+            <Fallback name="selection_fallback">
+                <!-- Try selecting by confidence first -->
+                <Sequence name="select_by_confidence">
+                    <PhaseAction phase_name="select"
+                                 params='{"strategy": "best_confidence", "min_confidence": 0.5}'
+                                 timeout_sec="10"
+                                 result_status="{select_status}"/>
+                    <HasTarget/>
+                </Sequence>
+
+                <!-- If high-confidence target not found, try largest -->
+                <Sequence name="select_largest">
+                    <PhaseAction phase_name="select"
+                                 params='{"strategy": "largest", "min_confidence": 0.3}'
+                                 timeout_sec="10"
+                                 result_status="{select_status}"/>
+                    <HasTarget/>
+                </Sequence>
+
+                <!-- Last resort: nearest with low confidence threshold -->
+                <Sequence name="select_nearest">
+                    <PhaseAction phase_name="select"
+                                 params='{"strategy": "nearest", "min_confidence": 0.2}'
+                                 timeout_sec="10"
+                                 result_status="{select_status}"/>
+                    <HasTarget/>
+                </Sequence>
+            </Fallback>
+
+            <!-- Phase 4: Navigate to target -->
+            <PhaseAction phase_name="navigate"
+                         params="{}"
+                         timeout_sec="120"
+                         result_status="{nav_status}"/>
+
+            <!-- Verify we're close enough before descending -->
+            <CheckDistance threshold="15.0"/>
+
+            <!-- Phase 5: Descend to approach altitude -->
+            <PhaseAction phase_name="descend"
+                         params="{}"
+                         timeout_sec="60"
+                         result_status="{descend_status}"/>
+
+            <!-- Phase 6: Final approach with retry -->
+            <RetryNode num_attempts="2" name="approach_retry">
+                <PhaseAction phase_name="approach"
+                             params='{"use_down_camera": true}'
+                             timeout_sec="60"
+                             result_status="{approach_status}"/>
+            </RetryNode>
+
+        </Sequence>
+    </BehaviorTree>
+
+    <!-- Subtree: Emergency Landing (can be called from reactive layer) -->
+    <BehaviorTree ID="EmergencyLand">
+        <Sequence name="emergency_sequence">
+            <PhaseAction phase_name="land"
+                         params="{}"
+                         timeout_sec="30"
+                         result_status="{land_status}"/>
+        </Sequence>
+    </BehaviorTree>
+
+    <!-- Subtree: Hover in Place -->
+    <BehaviorTree ID="HoverInPlace">
+        <PhaseAction phase_name="hover"
+                     params='{"duration": 5.0}'
+                     timeout_sec="10"
+                     result_status="{hover_status}"/>
+    </BehaviorTree>
+
+</root>

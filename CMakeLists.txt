@@ -63,6 +63,7 @@ endif()
 add_subdirectory(libs/data_types)
 add_subdirectory(libs/zenoh_interface)
 add_subdirectory(libs/control_algorithms)
+add_subdirectory(libs/behavior_tree)          # BehaviorTree.CPP integration
 
 # --- Simulation/Platform Interfaces ---
 add_subdirectory(sim_interfaces/airsim_client)       # Requires AIRSIM_ROOT
@@ -81,3 +82,4 @@ add_subdirectory(demos/01_sensor_streaming)
 add_subdirectory(demos/02_waypoint_following)
 add_subdirectory(demos/03_object_tracking)
 add_subdirectory(demos/04_obstacle_avoidance)  # Phase 4
+add_subdirectory(demos/05_behavior_tree)       # Behavior Tree mission runner
