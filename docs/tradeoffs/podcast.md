@@ -59,7 +59,7 @@ Here are concise, punchy talking points for each question. These are designed to
 ## 1. The "Aha!" Moment
 
 * **The Pattern:** We didn't set out to find a problem; the problem found us. Every founder we spoke to was frustrated. They had great code and great hardware, but the "bridge" between them was broken.
-* **The 99% Failure:** We realized that 99 out of 100 times, the failure wasn't the AI’s "brain"—it was the "body’s" inability to support that brain.
+* **The 99% Failure:** We realized that 99 out of 100 times, the failure wasn't the robot's "body"—it was the robot "brain’s" inability to support that body.
 * **The Pivot:** That’s when we realized Branes.ai didn't need to build another robot; we needed to build the system that makes *all* robots actually work as advertised.
 
 ## 2. The Physics of Autonomy
@@ -71,12 +71,12 @@ Here are concise, punchy talking points for each question. These are designed to
 ## 3. Solving the "10% Performance" Trap
 
 * **The "Spec Sheet" Lie:** Compute vendors give you "best-case scenario" numbers. But when you put that chip in a sealed plastic box in the sun, performance throttles down to 10% almost instantly.
-* **The Branes Intervention:** Our Agentic system acts as a "Mission Surgeon." It identifies exactly where the bottlenecks are—whether it’s a thermal spike or a memory leak—and reconfigures the system in real-time.
+* **The Branes Intervention:** Our Agentic system acts as a "Mission Surgeon." It identifies exactly where the bottlenecks are—whether it’s a thermal spike or inefficient memory management—and reconfigures the system instantaneously.
 * **The Result:** We move companies from "it works on the bench" to "it works in the field, all day, every time."
 
 ## 4. The Boston Advantage
 
-* **The Talent Density:** Boston is the "Silicon Valley of Robotics." We aren't just hiring engineers; we’re hiring people who have spent a decade seeing robots fail in the real world.
+* **The Talent Density:** Boston is the "Silicon Valley of Robotics." We aren't just hiring engineers; we’re looking for mindful engineers who have spent a decade seeing robots fail in the real world.
 * **The Feedback Loop:** Being minutes away from the world’s leading robotics labs allows us to battle-test our Agentic systems against the most complex hardware on the planet.
 * **Recruiting Vision:** We’re looking for the engineers who are tired of "demo-ware" and want to solve the foundational problems of Embodied AI.
 
@@ -90,7 +90,7 @@ Here are concise, punchy talking points for each question. These are designed to
 
 ### Quick Interview Tip: The "Hook"
 
-Since the name of your company is **Branes.ai**, you can use a clever closing line like: *"We provide the 'central nervous system' that ensures the 'brain' doesn't outrun the 'body'."* It’s a sticky metaphor that people will remember.
+Since the name of your company is **Branes.ai**, you can use a clever closing line like: *"We provide the 'central nervous system' that ensures the 'brain' make the 'body' an Olympic Athlete."* It’s a sticky metaphor that people will remember.
 
 ## Elevator Pitch
 
@@ -104,9 +104,9 @@ Here is a 30-second pitch designed for a high-energy podcast start:
 
 "Most people think the biggest challenge in robotics is the AI 'brain,' but at **Branes.ai**, we’ve discovered a different reality.
 
-We found that 99 out of 100 autonomous systems fail to meet their mission goals because of **performance engineering**. Basically, when the 'brain' asks for power, the 'body' overheats or runs out of juice. The product dies on the vine because it only hits 10% of its promised performance.
+We found that 99 out of 100 autonomous systems fail to meet their mission goals because of **performance engineering**. Basically, the 'brain' is very inefficient with energy, causing the 'body' to run out of juice. The product dies on the vine because it only hits 10% of its promised performance.
 
-At Branes, we’ve built an **Embodied AI Agentic system** that closes that gap. We optimize the physics of the machine—heat, energy, and efficiency—to increase mission distance and data capture. Simply put: we provide the nervous system that ensures the robot's body can actually keep up with its brain."
+At Branes, we’ve built an **Embodied AI Agentic system** that closes that gap. We optimize the physics of the machine—heat, energy, and efficiency—to increase mission distance and data capture. Simply put: we provide the nervous system that ensures the robot's brain can actually keep up with its body."
 
 ---
 
