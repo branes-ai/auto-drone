@@ -76,7 +76,7 @@ Examples:
 Available phases: """ + ", ".join(list_phases())
     )
 
-    parser.add_argument("--connect", required=True,
+    parser.add_argument("--connect",
                         help="Zenoh endpoint (e.g., tcp/localhost:7447)")
     parser.add_argument("--config", "-c",
                         help="Mission config YAML file")
@@ -100,6 +100,10 @@ Available phases: """ + ", ".join(list_phases())
         for phase in list_phases():
             print(f"  - {phase}")
         return 0
+
+    if not args.connect:
+        print("ERROR: --connect is required unless you are using --list-phases")
+        return 1
 
     # Load config
     if args.config:
