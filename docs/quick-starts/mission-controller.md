@@ -24,7 +24,7 @@ pip install -r packages\mission_framework\requirements.txt
 The mission framework imports `data_types` from `sim_interfaces/airsim_zenoh_bridge`, so add both package roots to `PYTHONPATH` when running scripts directly.
 
 ```powershell
-$env:PYTHONPATH = "d:\Drone\auto-drone\packages;d:\Drone\auto-drone\sim_interfaces\airsim_zenoh_bridge"
+$env:PYTHONPATH = "$PWD\packages;$PWD\sim_interfaces\airsim_zenoh_bridge"
 ```
 
 ## Run the baseline mission
@@ -68,7 +68,7 @@ python sim_interfaces\airsim_zenoh_bridge\run_mission.py --connect tcp/127.0.0.1
 Expected:
 - Mission prints `COMPLETED` for phases and final `Mission SUCCEEDED` when acceptance passes.
 - Metrics file is generated at:
-  - `outputs/mission1_solitary_sentinel_metrics.json`
+  - `outputs/solitary_sentinel_baseline_metrics.json`
 
 ## Suggested Mission 1 starting point
 

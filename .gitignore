@@ -70,3 +70,6 @@ CMakeUserPresets.json
 
 # debug information files
 *.dwo
+
+# Generated mission outputs
+outputs/

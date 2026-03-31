@@ -16,6 +16,8 @@ robot_id: drone
 cameras:
   - front
 
+output_dir: outputs
+
 target_class: "orange ball"
 
 observation_altitude: 8.0
@@ -46,7 +48,6 @@ phases:
       min_confidence: 0.25
       detection_max_age_s: 0.5
       lost_timeout_s: 2.0
-      metrics_output_path: "outputs/mission1_solitary_sentinel_metrics.json"
 
       # Area proxy for distance control:
       # larger area means "closer", smaller area means "farther".
