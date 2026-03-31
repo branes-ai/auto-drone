@@ -69,6 +69,11 @@ class FollowTargetPhase(MissionPhase):
         max_vertical = float(self.config.get("max_vertical_speed", 0.8))
 
         metrics_output_path = self.config.get("metrics_output_path", "")
+        if not metrics_output_path:
+            output_dir = self.get_param("output_dir", "outputs")
+            mission_name = self.get_param("mission_name", "mission")
+            metrics_output_path = os.path.join(output_dir, f"{mission_name}_metrics.json")
+
         min_track_ratio = float(self.config.get("min_track_ratio", 0.80))
         max_avg_abs_bearing_x = float(self.config.get("max_avg_abs_bearing_x", 0.35))
         max_avg_abs_area_error_ratio = float(self.config.get("max_avg_abs_area_error_ratio", 0.55))
