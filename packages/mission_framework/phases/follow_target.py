@@ -69,11 +69,9 @@ class FollowTargetPhase(MissionPhase):
         vertical_gain = float(self.config.get("vertical_gain", 0.8))
         max_vertical = float(self.config.get("max_vertical_speed", 0.8))
 
-        metrics_output_path = self.config.get("metrics_output_path", "")
-        if not metrics_output_path:
-            output_dir = self.get_param("output_dir", "outputs")
-            mission_name = self.get_param("mission_name", "mission")
-            metrics_output_path = os.path.join(output_dir, f"{mission_name}_metrics.json")
+        output_dir = self.get_param("output_dir", "outputs")
+        mission_name = self.get_param("mission_name", "mission")
+        metrics_output_path = os.path.join(output_dir, f"{mission_name}_metrics.json")
 
         min_track_ratio = float(self.config.get("min_track_ratio", 0.80))
         max_avg_abs_bearing_x = float(self.config.get("max_avg_abs_bearing_x", 0.35))
@@ -133,10 +131,8 @@ class FollowTargetPhase(MissionPhase):
             }
 
         def export_metrics() -> None:
-            if not metrics_output_path:
-                return
-            out_path = os.path.abspath(metrics_output_path)
             try:
+                out_path = os.path.abspath(metrics_output_path)
                 out_dir = os.path.dirname(out_path)
                 if out_dir:
                     os.makedirs(out_dir, exist_ok=True)
@@ -145,10 +141,10 @@ class FollowTargetPhase(MissionPhase):
                 metrics["metrics_exported"] = True
                 metrics.pop("metrics_export_error", None)
                 print(f"\n  Metrics written to: {out_path}")
-            except OSError as e:
+            except Exception as e:
                 metrics["metrics_exported"] = False
                 metrics["metrics_export_error"] = str(e)
-                print(f"\n  WARNING: Failed to write metrics to {out_path}: {e}")
+                print(f"\n  WARNING: Failed to write metrics to {metrics_output_path}: {e}")
 
         def acceptance_passed() -> bool:
             return (
