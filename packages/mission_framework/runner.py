@@ -100,6 +100,8 @@ class MissionRunner:
             'arrival_distance': self.config.arrival_distance,
             'camera_handoff_distance': self.config.camera_handoff_distance,
             'phase_timeout': self.config.phase_timeout,
+            'output_dir': self.config.output_dir,
+            'mission_name': self.config.name,
         }
 
         # Create services

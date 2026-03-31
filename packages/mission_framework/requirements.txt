@@ -1,0 +1,12 @@
+# Mission framework runtime dependencies
+# Install these in the Python environment used for mission execution.
+
+eclipse-zenoh>=1.0.0
+numpy>=1.24.0
+PyYAML>=6.0
+
+# Optional helpers for local experimentation and validation
+pytest>=8.0.0
+
+# If you want to work with image-based mission inputs locally, keep this available.
+opencv-python>=4.8.0
