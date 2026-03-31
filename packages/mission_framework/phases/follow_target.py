@@ -90,7 +90,7 @@ class FollowTargetPhase(MissionPhase):
         print(f"  Duration: {duration_s:.1f}s")
         print(f"  Desired bbox area: {desired_area:.0f}px")
 
-        start = time.time()
+        start = time.monotonic()
         last_seen = start
 
         metrics = {
@@ -105,6 +105,7 @@ class FollowTargetPhase(MissionPhase):
             "avg_command_delta": 0.0,
             "track_ratio": 0.0,
             "acceptance": {},
+            "metrics_exported": False,
         }
         sum_abs_bx = 0.0
         sum_abs_by = 0.0
@@ -135,12 +136,19 @@ class FollowTargetPhase(MissionPhase):
             if not metrics_output_path:
                 return
             out_path = os.path.abspath(metrics_output_path)
-            out_dir = os.path.dirname(out_path)
-            if out_dir:
-                os.makedirs(out_dir, exist_ok=True)
-            with open(out_path, "w", encoding="utf-8") as f:
-                json.dump(metrics, f, indent=2)
-            print(f"\n  Metrics written to: {out_path}")
+            try:
+                out_dir = os.path.dirname(out_path)
+                if out_dir:
+                    os.makedirs(out_dir, exist_ok=True)
+                with open(out_path, "w", encoding="utf-8") as f:
+                    json.dump(metrics, f, indent=2)
+                metrics["metrics_exported"] = True
+                metrics.pop("metrics_export_error", None)
+                print(f"\n  Metrics written to: {out_path}")
+            except OSError as e:
+                metrics["metrics_exported"] = False
+                metrics["metrics_export_error"] = str(e)
+                print(f"\n  WARNING: Failed to write metrics to {out_path}: {e}")
 
         def acceptance_passed() -> bool:
             return (
@@ -151,7 +159,7 @@ class FollowTargetPhase(MissionPhase):
             )
 
         while self.state.running and not self.is_cancelled:
-            elapsed = time.time() - start
+            elapsed = time.monotonic() - start
             if elapsed >= duration_s:
                 self.drone.hover()
                 finalize_metrics(elapsed)
@@ -173,8 +181,9 @@ class FollowTargetPhase(MissionPhase):
             if det is None or det.confidence < min_conf:
                 self.drone.hover()
                 metrics["frames_no_target"] += 1
-                lost_for = time.time() - last_seen
+                lost_for = time.monotonic() - last_seen
                 metrics["max_lost_streak_s"] = max(metrics["max_lost_streak_s"], lost_for)
+                prev_cmd = None
 
                 if lost_for > lost_timeout_s:
                     finalize_metrics(elapsed)
@@ -188,7 +197,7 @@ class FollowTargetPhase(MissionPhase):
                 await asyncio.sleep(0.1)
                 continue
 
-            last_seen = time.time()
+            last_seen = time.monotonic()
             metrics["frames_tracked"] += 1
 
             bearing_x = float(det.bearing_x)
@@ -232,7 +241,7 @@ class FollowTargetPhase(MissionPhase):
             await asyncio.sleep(0.1)
 
         self.drone.hover()
-        finalize_metrics(time.time() - start)
+        finalize_metrics(time.monotonic() - start)
         self.state.phase_data["follow_target_metrics"] = metrics
         export_metrics()
         return PhaseResult(
