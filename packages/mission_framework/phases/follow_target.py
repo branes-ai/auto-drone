@@ -9,6 +9,7 @@ Mission 1 (Solitary Sentinel) baseline phase:
 
 import asyncio
 import json
+import math
 import os
 import time
 
@@ -79,6 +80,12 @@ class FollowTargetPhase(MissionPhase):
         max_avg_abs_area_error_ratio = float(self.config.get("max_avg_abs_area_error_ratio", 0.55))
         max_avg_command_delta = float(self.config.get("max_avg_command_delta", 1.0))
 
+        if desired_area <= 0.0:
+            return PhaseResult(
+                status=PhaseStatus.FAILED,
+                message=f"Invalid desired_area={desired_area}. It must be > 0.",
+            )
+
         print(f"  Target class: '{target_class}'")
         print(f"  Duration: {duration_s:.1f}s")
         print(f"  Desired bbox area: {desired_area:.0f}px")
@@ -103,6 +110,7 @@ class FollowTargetPhase(MissionPhase):
         sum_abs_by = 0.0
         sum_abs_area_err = 0.0
         sum_cmd_delta = 0.0
+        command_delta_samples = 0
         prev_cmd = None
 
         def finalize_metrics(current_elapsed: float) -> None:
@@ -112,7 +120,7 @@ class FollowTargetPhase(MissionPhase):
             metrics["avg_abs_bearing_x"] = sum_abs_bx / tracked
             metrics["avg_abs_bearing_y"] = sum_abs_by / tracked
             metrics["avg_abs_area_error_ratio"] = sum_abs_area_err / tracked
-            metrics["avg_command_delta"] = (sum_cmd_delta / tracked) if tracked > 0 else 0.0
+            metrics["avg_command_delta"] = (sum_cmd_delta / command_delta_samples) if command_delta_samples > 0 else 0.0
             metrics["track_ratio"] = (
                 metrics["frames_tracked"] / total_frames if total_frames > 0 else 0.0
             )
@@ -191,17 +199,20 @@ class FollowTargetPhase(MissionPhase):
             if abs(area_error_ratio) < area_tolerance:
                 area_error_ratio = 0.0
 
-            vx = _clamp(forward_gain * area_error_ratio, -max_reverse, max_forward)
+            forward_speed = _clamp(forward_gain * area_error_ratio, -max_reverse, max_forward)
             yaw_rate = _clamp(yaw_gain * bearing_x, -max_yaw_rate, max_yaw_rate)
             vz = _clamp(vertical_gain * bearing_y, -max_vertical, max_vertical)
 
-            # Mission 1 baseline: adjust forward distance + center target in image.
-            self.drone.send_velocity(vx, 0.0, vz, yaw_rate)
+            # DroneService expects world-frame NED velocities.
+            _, _, _, yaw = self.drone.pose
+            vx = forward_speed * math.cos(yaw)
+            vy = forward_speed * math.sin(yaw)
+            self.drone.send_velocity(vx, vy, vz, yaw_rate)
 
             sum_abs_bx += abs(bearing_x)
             sum_abs_by += abs(bearing_y)
             sum_abs_area_err += abs(area_error_ratio)
-            cmd = (vx, 0.0, vz, yaw_rate)
+            cmd = (vx, vy, vz, yaw_rate)
             if prev_cmd is not None:
                 delta = (
                     abs(cmd[0] - prev_cmd[0])
@@ -210,6 +221,7 @@ class FollowTargetPhase(MissionPhase):
                     + abs(cmd[3] - prev_cmd[3])
                 )
                 sum_cmd_delta += delta
+                command_delta_samples += 1
             prev_cmd = cmd
 
             print(
