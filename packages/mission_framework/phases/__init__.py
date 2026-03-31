@@ -66,6 +66,7 @@ from .navigate import NavigatePhase
 from .descend import DescendPhase
 from .approach import ApproachPhase
 from .land import LandPhase
+from .follow_target import FollowTargetPhase
 
 __all__ = [
     'PHASE_REGISTRY',
@@ -82,4 +83,5 @@ __all__ = [
     'DescendPhase',
     'ApproachPhase',
     'LandPhase',
+    'FollowTargetPhase',
 ]

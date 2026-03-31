@@ -1,0 +1,75 @@
+# Mission 1: Solitary Sentinel
+#
+# Objective:
+# Track one target class and maintain a safe stand-off distance.
+#
+# Notes:
+# - Uses a single follow phase as the baseline mission-controller scaffold.
+# - Works with any detector publishing to:
+#     robot/{robot_id}/perception/detections/{camera_id}
+
+name: solitary_sentinel_baseline
+description: Mission 1 baseline single-target tracking with safe-distance control
+
+robot_id: drone
+
+cameras:
+  - front
+
+output_dir: outputs
+
+target_class: "orange ball"
+
+observation_altitude: 8.0
+approach_altitude: 8.0
+
+ascent_speed: 2.0
+descent_speed: 1.0
+nav_speed: 2.0
+approach_speed: 2.0
+scan_yaw_rate: 0.5
+
+descent_threshold: 10.0
+arrival_distance: 3.0
+camera_handoff_distance: 8.0
+
+mission_timeout: 120.0
+phase_timeout: 60.0
+
+phases:
+  - type: ascend
+    name: "Ascend to observation altitude"
+    params: {}
+
+  - type: follow_target
+    name: "Follow target with safe stand-off"
+    params:
+      duration_s: 45.0
+      min_confidence: 0.25
+      detection_max_age_s: 0.5
+      lost_timeout_s: 2.0
+
+      # Area proxy for distance control:
+      # larger area means "closer", smaller area means "farther".
+      desired_area: 12000
+      area_tolerance_ratio: 0.15
+      forward_gain: 2.0
+      max_forward_speed: 2.0
+      max_reverse_speed: 1.0
+
+      # Centering control
+      yaw_gain: 0.8
+      max_yaw_rate: 0.6
+      vertical_gain: 0.8
+      max_vertical_speed: 0.8
+
+      # Acceptance criteria (Mission 1 completion gate)
+      min_track_ratio: 0.80
+      max_avg_abs_bearing_x: 0.35
+      max_avg_abs_area_error_ratio: 0.55
+      max_avg_command_delta: 1.0
+
+  - type: hover
+    name: "Stabilize"
+    params:
+      duration: 3.0

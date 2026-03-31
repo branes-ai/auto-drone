@@ -33,6 +33,7 @@ class MissionConfig:
     # Connection
     robot_id: str = "drone"
     cameras: List[str] = field(default_factory=lambda: ["front"])
+    output_dir: str = "outputs"
 
     # Target specification
     target_class: str = "orange ball"
@@ -95,6 +96,7 @@ class MissionConfig:
             description=data.get('description', ''),
             robot_id=data.get('robot_id', 'drone'),
             cameras=data.get('cameras', ['front']),
+            output_dir=data.get('output_dir', 'outputs'),
             target_class=data.get('target_class', 'orange ball'),
             observation_altitude=data.get('observation_altitude', 25.0),
             approach_altitude=data.get('approach_altitude', 5.0),
@@ -118,6 +120,7 @@ class MissionConfig:
             name="orange_ball_default",
             description="Default orange ball tracking mission",
             cameras=["front", "back", "down"],
+            output_dir="outputs",
             target_class="orange ball",
             phases=[
                 PhaseConfig(name="Ascend", type="ascend"),
@@ -136,6 +139,7 @@ class MissionConfig:
             'description': self.description,
             'robot_id': self.robot_id,
             'cameras': self.cameras,
+            'output_dir': self.output_dir,
             'target_class': self.target_class,
             'observation_altitude': self.observation_altitude,
             'approach_altitude': self.approach_altitude,
@@ -172,6 +176,7 @@ class MissionConfig:
         print(f"  Description: {self.description}")
         print(f"  Target: '{self.target_class}'")
         print(f"  Cameras: {self.cameras}")
+        print(f"  Output dir: {self.output_dir}")
         print(f"  Observation altitude: {self.observation_altitude}m")
         print(f"  Approach altitude: {self.approach_altitude}m")
         print(f"  Phases: {len(self.phases)}")
