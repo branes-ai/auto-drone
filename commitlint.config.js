@@ -39,7 +39,7 @@ module.exports = {
         'cmake',        // build system
       ],
     ],
-    'subject-case': [2, 'always', 'lower-case'],
+    'subject-case': [2, 'never', ['start-case', 'pascal-case', 'upper-case']],
     'header-max-length': [2, 'always', 100],
     'body-max-line-length': [1, 'always', 200], // warning only
   },

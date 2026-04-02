@@ -143,15 +143,17 @@ For teams, combine Topology B for daily development with Topology C for automate
 
 ## Step 3: Choose Your Cloud Instance (Topology C)
 
-If you need a cloud GPU instance, here are the recommended options sorted by cost:
+If you need a cloud GPU instance, here are the recommended options sorted by cost.
+
+> **Prices as of 2026-04-02.** Cloud GPU pricing changes frequently. Verify current rates at the provider links below before provisioning.
 
 | Provider | Instance Type | GPU | VRAM | Cost/hr (approx) | Notes |
 |----------|--------------|-----|------|-------------------|-------|
-| AWS | `g5.xlarge` | 1x A10G | 24 GB | $1.00 | Best balance |
-| AWS | `g6.xlarge` | 1x L4 | 24 GB | $0.80 | Newer, slightly cheaper |
-| GCP | `g2-standard-4` | 1x L4 | 24 GB | $0.70 | Cheapest option |
-| Azure | `Standard_NC4as_T4_v3` | 1x T4 | 16 GB | $0.53 | Budget option (T4 is minimum spec) |
-| Azure | `Standard_NCS_v3` | 1x V100 | 16 GB | $3.00 | Overkill for single-drone sim |
+| [AWS](https://aws.amazon.com/ec2/pricing/on-demand/) | `g5.xlarge` | 1x A10G | 24 GB | $1.00 | Best balance |
+| [AWS](https://aws.amazon.com/ec2/pricing/on-demand/) | `g6.xlarge` | 1x L4 | 24 GB | $0.80 | Newer, slightly cheaper |
+| [GCP](https://cloud.google.com/compute/gpus-pricing) | `g2-standard-4` | 1x L4 | 24 GB | $0.70 | Cheapest option |
+| [Azure](https://azure.microsoft.com/en-us/pricing/details/virtual-machines/linux/) | `Standard_NC4as_T4_v3` | 1x T4 | 16 GB | $0.53 | Budget option (T4 is minimum spec) |
+| [Azure](https://azure.microsoft.com/en-us/pricing/details/virtual-machines/linux/) | `Standard_NCS_v3` | 1x V100 | 16 GB | $3.00 | Overkill for single-drone sim |
 
 **Minimum GPU requirements for Isaac Sim:**
 - GPU: NVIDIA RTX 2070 or higher (RTX, Quadro RTX, or datacenter A-series/L-series)
