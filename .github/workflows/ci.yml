@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   ZENOH_VERSION: "1.0.0"
 
@@ -156,3 +160,25 @@ jobs:
 
       - name: Test
         run: ctest --preset windows-release --output-on-failure
+
+  # Gate job: all platform builds must pass before a PR can merge
+  ci-pass:
+    if: always()
+    needs: [build-linux, build-macos, build-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check all jobs passed
+        run: |
+          if [[ "${{ needs.build-linux.result }}" != "success" ]]; then
+            echo "::error::Linux build failed"
+            exit 1
+          fi
+          if [[ "${{ needs.build-macos.result }}" != "success" ]]; then
+            echo "::error::macOS build failed"
+            exit 1
+          fi
+          if [[ "${{ needs.build-windows.result }}" != "success" ]]; then
+            echo "::error::Windows build failed"
+            exit 1
+          fi
+          echo "All platform builds passed"
