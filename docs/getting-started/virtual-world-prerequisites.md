@@ -15,7 +15,7 @@ nvidia-smi
 
 If `nvidia-smi` is found, you'll see output like:
 
-```
+```text
 +-----------------------------------------------------------------------------+
 | NVIDIA-SMI 550.54.14    Driver Version: 550.54.14    CUDA Version: 12.4     |
 |-------------------------------+----------------------+----------------------+
@@ -72,7 +72,7 @@ The auto-drone platform separates **simulation** (GPU-intensive) from **autonomy
 
 **Requires**: A Linux machine with an NVIDIA RTX GPU (minimum RTX 2070, recommended RTX 3080+).
 
-```
+```text
 ┌──────────────────────────────────────────────┐
 │  Linux Workstation (with NVIDIA RTX GPU)      │
 │                                               │
@@ -93,7 +93,7 @@ The auto-drone platform separates **simulation** (GPU-intensive) from **autonomy
 
 This is the same split used by the existing Project AirSim integration, so it will feel familiar.
 
-```
+```text
 ┌──────────────────────┐    Zenoh     ┌───────────────────────┐
 │  Linux Server        │◄────────────►│  Windows Workstation   │
 │  (no GPU required)   │  (network)   │  (NVIDIA RTX GPU)      │
@@ -113,7 +113,7 @@ This is the same split used by the existing Project AirSim integration, so it wi
 
 This is the right choice when no local machine has an NVIDIA GPU.
 
-```
+```text
 ┌──────────────────────┐    Zenoh     ┌───────────────────────┐
 │  Linux Server        │◄────────────►│  Cloud GPU VM          │
 │  (no GPU required)   │  (network)   │  (NVIDIA RTX GPU)      │
@@ -172,7 +172,7 @@ python3.10 -m venv ~/venv/isaac-sim
 source ~/venv/isaac-sim/bin/activate
 
 # Install Isaac Sim (as of 4.5+, pip-installable)
-pip install isaacsim
+pip install isaacsim --extra-index-url https://pypi.nvidia.com
 ```
 
 ### Option B: Docker container (Linux with GPU, recommended for reproducibility)
@@ -312,7 +312,7 @@ else:
 
 ## Decision Flowchart
 
-```
+```text
 Does your Linux server have an NVIDIA RTX GPU?
   │
   ├── YES ──► Topology A (all-in-one) or Topology D (hybrid)

@@ -31,7 +31,7 @@ A mature Zenoh-based autonomy stack (Phases 1-5 complete) with C++ libs (data ty
 
 **Concept**: Write a custom Isaac Sim extension that embeds Zenoh directly inside the simulator process. OmniGraph nodes publish sensor data to Zenoh topics and subscribe to command topics — no intermediate bridge process.
 
-```
+```text
 +---------------------------------------------------+
 |  Isaac Sim Process (GPU host or cloud)             |
 |                                                    |
@@ -83,7 +83,7 @@ A mature Zenoh-based autonomy stack (Phases 1-5 complete) with C++ libs (data ty
 
 **Concept**: Fork NVIDIA's open-source `IsaacSimZMQ` and replace the ZMQ transport with Zenoh, keeping the Protobuf message schemas. A separate bridge process translates between Isaac Sim's native format and the Zenoh data types.
 
-```
+```text
 +---------------------------------------------------+
 |  Isaac Sim Process                                 |
 |                                                    |
@@ -142,7 +142,7 @@ A mature Zenoh-based autonomy stack (Phases 1-5 complete) with C++ libs (data ty
 
 **Concept**: Run Isaac Sim headless via its Python API (the Core Experimental API in 5.0+). A Python process controls the simulation loop directly, reads sensor data from render products, computes physics, and publishes everything to Zenoh. No extensions, no OmniGraph, no bridge.
 
-```
+```text
 +--------------------------------------------------------+
 |  Isaac Sim Headless Process (Python-controlled)         |
 |                                                         |
@@ -222,8 +222,8 @@ A mature Zenoh-based autonomy stack (Phases 1-5 complete) with C++ libs (data ty
 
 | Vehicle Type | Dynamics Implementation |
 |---|---|
-| Multirotor | Python class: 4-6 rotor positions, thrust = k * omega^2, torque = b * omega^2. ~50 lines. |
-| Fixed-wing | Python class: lift = 0.5 * rho * v^2 * S * CL(alpha), drag similar. Control surfaces as torque generators. ~100 lines. |
+| Multirotor | Python class: 4-6 rotor positions, `thrust = k * omega^2`, `torque = b * omega^2`. ~50 lines. |
+| Fixed-wing | Python class: `lift = 0.5 * rho * v^2 * S * CL(alpha)`, drag similar. Control surfaces as torque generators. ~100 lines. |
 | FPV racing | Multirotor subclass with higher thrust-to-weight ratio, reduced drag coefficients, response time tuning. |
 
 ---
@@ -306,7 +306,7 @@ After experiments 1-4, data will inform the final architecture choice:
 
 ## Proposed Directory Structure
 
-```
+```text
 sim_interfaces/
   isaac_headless/              # Experiment 1-2 (Architecture C)
     isaac_zenoh_node.py        # Main headless sim + Zenoh pub/sub
