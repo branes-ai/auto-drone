@@ -123,7 +123,7 @@ A mature Zenoh-based autonomy stack (Phases 1-5 complete) with C++ libs (data ty
 ### Strengths
 
 - Fastest path to working integration — IsaacSimZMQ handles sensor acquisition, CUDA-to-CPU transfer, and serialization
-- Follows the exact same pattern as the proven `airsim_zenoh_bridge.py`
+- Follows the same pattern as the proven `airsim_zenoh_bridge.py`
 - Decoupled: Isaac Sim API changes only affect the bridge, not autonomy code
 - Can run Isaac Sim on a remote GPU machine with the bridge co-located there
 - Protobuf schemas are well-documented and versioned
@@ -203,7 +203,7 @@ A mature Zenoh-based autonomy stack (Phases 1-5 complete) with C++ libs (data ty
 - `get_rgba()` returns CPU numpy arrays — no CUDA zero-copy path
 - ~5-10ms overhead per camera frame vs. C++ OmniGraph path
 - Less "production-grade" for high-frequency control loops (>100Hz)
-- No Zenoh SHM (Python Zenoh bindings don't support SHM yet)
+- Zenoh SHM requires the `shared-memory` feature flag (`pip install eclipse-zenoh --no-binary :all: --config-settings build-args="--features=zenoh/shared-memory"`)
 - Visualization requires separate WebRTC connection — no integrated viewport debugging
 
 ---
@@ -239,7 +239,7 @@ A mature Zenoh-based autonomy stack (Phases 1-5 complete) with C++ libs (data ty
 | **Vehicle model flexibility** | Medium (C++/Python ext) | Medium | High (pure Python) |
 | **Production readiness** | Highest | High | Medium |
 | **Remote rendering** | Built-in viewport | WebRTC separate | WebRTC separate |
-| **Zenoh SHM support** | Yes (C++ path) | No (ZMQ boundary) | No (Python limitation) |
+| **Zenoh SHM support** | Yes (C++ path) | No (ZMQ boundary) | Yes (requires `shared-memory` feature flag) |
 | **Similarity to existing code** | New pattern | Mirrors airsim_bridge | New pattern |
 | **Multi-sim support** | Isaac only | Could bridge both AirSim and Isaac | Isaac only |
 
