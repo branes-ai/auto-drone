@@ -4,10 +4,6 @@ Mock AirSim Zenoh Bridge for local testing.
 
 This simulates the real airsim_zenoh_bridge.py without requiring Project AirSim.
 Use this to test Zenoh connectivity and data serialization on Linux.
-
-Usage:
-    python mock_bridge.py --zenoh-listen tcp/0.0.0.0:7447
-    python mock_bridge.py  # Uses default local scouting
 """
 
 import argparse
@@ -16,6 +12,7 @@ import sys
 import time
 import threading
 import math
+import random
 from dataclasses import dataclass
 from typing import Optional
 
@@ -26,6 +23,14 @@ from data_types import (
     ImageData, ImageEncoding, Odometry, VelocityCommand,
     CommandPriority, CommandSource
 )
+
+NOISE_LEVELS = {
+    "0": 0.0,
+    "low": 0.05,
+    "medium": 0.10,
+    "high": 0.20,
+    "very_high": 0.40,
+}
 
 
 @dataclass
@@ -48,14 +53,28 @@ class MockDroneState:
 class MockAirSimBridge:
     """Mock bridge that simulates AirSim sensor data."""
 
-    def __init__(self, zenoh_listen: Optional[str] = None, robot_id: str = "drone"):
+    def __init__(
+        self,
+        zenoh_listen: Optional[str] = None,
+        robot_id: str = "drone",
+        start_x: float = 0.0,
+        start_y: float = 0.0,
+        start_z: float = -5.0,
+        start_yaw_rad: float = 0.0,
+        actuator_noise_level: float = 0.0,
+        seed: Optional[int] = None,
+    ):
         self.zenoh_listen = zenoh_listen
         self.robot_id = robot_id
         self.running = False
         self.session: Optional[zenoh.Session] = None
 
+        self.start_pose = (start_x, start_y, start_z, start_yaw_rad)
+        self.actuator_noise_level = actuator_noise_level
+        self.rng = random.Random(seed)
+
         # Simulated drone state
-        self.state = MockDroneState()
+        self.state = MockDroneState(x=start_x, y=start_y, z=start_z, yaw=start_yaw_rad)
         self.state_lock = threading.Lock()
 
         # Command state
@@ -114,16 +133,21 @@ class MockAirSimBridge:
             print(f"Failed to initialize Zenoh: {e}")
             return False
 
+    def _apply_relative_noise(self, value: float) -> float:
+        if self.actuator_noise_level <= 0.0 or value == 0.0:
+            return value
+        return value * (1.0 + self.rng.uniform(-self.actuator_noise_level, self.actuator_noise_level))
+
     def _on_velocity_command(self, sample: zenoh.Sample):
         """Handle incoming velocity commands."""
         try:
             cmd = VelocityCommand.deserialize(bytes(sample.payload))
 
             with self.state_lock:
-                self.state.vx = cmd.vx
+                self.state.vx = self._apply_relative_noise(cmd.vx)
                 self.state.vy = cmd.vy
-                self.state.vz = cmd.vz
-                self.state.yaw_rate = cmd.yaw_rate
+                self.state.vz = self._apply_relative_noise(cmd.vz)
+                self.state.yaw_rate = self._apply_relative_noise(cmd.yaw_rate)
                 self.last_command_time = time.time()
 
             self.stats['commands_received'] += 1
@@ -179,32 +203,25 @@ class MockAirSimBridge:
     def _publish_rgb(self):
         """Publish simulated RGB image (gradient pattern)."""
         width, height = 640, 480
-
-        # Create a gradient image with time-varying color
         t = time.time()
 
         img = np.zeros((height, width, 3), dtype=np.uint8)
 
-        # Horizontal gradient (varies with time)
         for x in range(width):
             r = int(128 + 127 * math.sin(x / 100.0 + t))
-            g = int(128 + 127 * math.sin(x / 100.0 + t + 2.094))  # 120 deg offset
-            b = int(128 + 127 * math.sin(x / 100.0 + t + 4.188))  # 240 deg offset
-            img[:, x] = [b, g, r]  # BGR format
+            g = int(128 + 127 * math.sin(x / 100.0 + t + 2.094))
+            b = int(128 + 127 * math.sin(x / 100.0 + t + 4.188))
+            img[:, x] = [b, g, r]
 
-        # Add a moving circle to show animation
-        cx = int(width/2 + width/4 * math.sin(t))
-        cy = int(height/2 + height/4 * math.cos(t * 0.7))
-        cv2_available = True
+        cx = int(width / 2 + width / 4 * math.sin(t))
+        cy = int(height / 2 + height / 4 * math.cos(t * 0.7))
         try:
             import cv2
             cv2.circle(img, (cx, cy), 30, (0, 255, 0), -1)
         except ImportError:
-            cv2_available = False
-            # Simple circle without OpenCV
             for dy in range(-30, 31):
                 for dx in range(-30, 31):
-                    if dx*dx + dy*dy <= 900:
+                    if dx * dx + dy * dy <= 900:
                         py, px = cy + dy, cx + dx
                         if 0 <= py < height and 0 <= px < width:
                             img[py, px] = [0, 255, 0]
@@ -216,16 +233,10 @@ class MockAirSimBridge:
     def _publish_depth(self):
         """Publish simulated depth image."""
         width, height = 640, 480
-
-        # Create a depth pattern (closer in center)
         y_coords, x_coords = np.ogrid[:height, :width]
         cx, cy = width // 2, height // 2
-
-        # Distance from center (normalized)
-        dist = np.sqrt((x_coords - cx)**2 + (y_coords - cy)**2)
-        max_dist = np.sqrt(cx**2 + cy**2)
-
-        # Depth: closer in center (lower value = closer)
+        dist = np.sqrt((x_coords - cx) ** 2 + (y_coords - cy) ** 2)
+        max_dist = np.sqrt(cx ** 2 + cy ** 2)
         depth = (dist / max_dist * 200 + 20).astype(np.uint8)
 
         image_data = ImageData.from_numpy(depth, ImageEncoding.GRAY8)
@@ -261,13 +272,16 @@ class MockAirSimBridge:
             return False
 
         self.running = True
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("Mock AirSim Bridge running")
-        print("="*60)
-        print(f"Simulating drone at initial position: (0, 0, -5)")
+        print("=" * 60)
+        print(
+            f"Simulating drone at initial position: "
+            f"({self.start_pose[0]}, {self.start_pose[1]}, {self.start_pose[2]}) yaw={math.degrees(self.start_pose[3]):.1f}deg"
+        )
+        print(f"Actuator noise level: {self.actuator_noise_level:.2f}")
         print("Press Ctrl+C to stop.\n")
 
-        # Start threads
         threads = [
             threading.Thread(target=self._state_update_loop, daemon=True),
             threading.Thread(target=self._sensor_loop, args=(self._publish_odometry, 100.0), daemon=True),
@@ -278,7 +292,6 @@ class MockAirSimBridge:
         for t in threads:
             t.start()
 
-        # Print stats periodically
         try:
             while self.running:
                 time.sleep(5.0)
@@ -321,12 +334,30 @@ def main():
                        help='Zenoh endpoint to listen on (e.g., tcp/0.0.0.0:7447)')
     parser.add_argument('--robot-id', type=str, default='drone',
                        help='Robot identifier for Zenoh topics')
+    parser.add_argument('--start-x', type=float, default=0.0,
+                       help='Initial X position (meters)')
+    parser.add_argument('--start-y', type=float, default=0.0,
+                       help='Initial Y position (meters)')
+    parser.add_argument('--start-z', type=float, default=-5.0,
+                       help='Initial Z position in NED (negative is above ground)')
+    parser.add_argument('--start-yaw-deg', type=float, default=0.0,
+                       help='Initial yaw in degrees')
+    parser.add_argument('--actuator-noise-level', choices=list(NOISE_LEVELS.keys()), default='0',
+                       help='Named actuator noise level applied to vx/vz/yaw_rate')
+    parser.add_argument('--seed', type=int, default=None,
+                       help='Optional random seed for reproducible actuator noise')
 
     args = parser.parse_args()
 
     bridge = MockAirSimBridge(
         zenoh_listen=args.zenoh_listen,
-        robot_id=args.robot_id
+        robot_id=args.robot_id,
+        start_x=args.start_x,
+        start_y=args.start_y,
+        start_z=args.start_z,
+        start_yaw_rad=math.radians(args.start_yaw_deg),
+        actuator_noise_level=NOISE_LEVELS[args.actuator_noise_level],
+        seed=args.seed,
     )
 
     def signal_handler(sig, frame):
