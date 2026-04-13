@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 Mock AirSim Zenoh Bridge for local testing.
 

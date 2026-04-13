@@ -35,7 +35,7 @@ DEFAULT_START_POSES = [
     {"x": -3.0, "y": 1.0, "z": -4.5, "yaw_deg": -25.0},
 ]
 
-TRAJECTORIES = ["straight", "curve", "speed_ramp"]
+TRAJECTORIES = ["oscillate", "straight", "curve", "speed_ramp"]
 
 
 def parse_args() -> argparse.Namespace:
