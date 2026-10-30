@@ -1,3 +1,7 @@
+---
+status: in-progress
+issue: branes-ai/auto-drone#9
+---
 # Mission Capability Development Roadmap
 
 ## Context

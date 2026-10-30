@@ -1,3 +1,7 @@
+---
+status: complete
+issue: branes-ai/auto-drone#22
+---
 # Mission 1: Solitary Sentinel - Why, What, How
 
 This note captures the purpose, implementation scope, execution flow, and
@@ -165,8 +169,8 @@ The most important learnings from this work were:
 Recommended check-in items:
 
 - `packages/mission_framework/configs/solitary_sentinel_tuned.yaml`
-- `docs/plans/solitary-sentinel-mock-validation.md`
-- `docs/plans/mission1-solitary-sentinel-working-doc.md`
+- `docs/plan/solitary-sentinel-mock-validation.md`
+- `docs/plan/mission1-solitary-sentinel-working-doc.md`
 - any supporting scripts/code changes required to reproduce the benchmark
 
 Recommended not to check in by default:
