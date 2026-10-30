@@ -1,4 +1,8 @@
-﻿# Mission 1 Mock Validation
+---
+status: complete
+issue: branes-ai/auto-drone#22
+---
+# Mission 1 Mock Validation
 
 This note records mock-based validation of Mission 1 (`Solitary Sentinel`) using:
 
