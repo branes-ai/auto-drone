@@ -8,17 +8,17 @@
 
 include(FetchContent)
 
-# Fetch BehaviorTree.CPP v4.6
+# Fetch BehaviorTree.CPP v4.7. 4.6.x bundles a lexy with a typo (`_colum_nr`)
+# that AppleClang 17 rejects; 4.7.0 has the fix.
 FetchContent_Declare(
     behaviortree_cpp
     GIT_REPOSITORY https://github.com/BehaviorTree/BehaviorTree.CPP.git
-    GIT_TAG        4.6.2
+    GIT_TAG        4.7.0
 )
 
 # Configure BT.CPP options - disable everything except core
 set(BTCPP_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 set(BTCPP_BUILD_TOOLS OFF CACHE BOOL "" FORCE)
-set(BTCPP_UNIT_TESTS OFF CACHE BOOL "" FORCE)
 set(BTCPP_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(BTCPP_GROOT_INTERFACE OFF CACHE BOOL "" FORCE)  # No ZeroMQ - we use Zenoh
 set(BTCPP_SQLITE_LOGGING OFF CACHE BOOL "" FORCE)   # No SQLite dependency
@@ -33,7 +33,13 @@ if(NOT behaviortree_cpp_POPULATED)
     FetchContent_Populate(behaviortree_cpp)
     # Skip install to avoid export issues
     set(CMAKE_SKIP_INSTALL_RULES TRUE)
+    # Since 4.7 BT.CPP builds its unit tests (which need GTest) when
+    # BUILD_TESTING is on; that option replaced BTCPP_UNIT_TESTS. Turn it off
+    # for BT.CPP only, then drop the override so this project's tests follow
+    # the cache value again.
+    set(BUILD_TESTING OFF)
     add_subdirectory(${behaviortree_cpp_SOURCE_DIR} ${behaviortree_cpp_BINARY_DIR} EXCLUDE_FROM_ALL)
+    unset(BUILD_TESTING)
     set(CMAKE_SKIP_INSTALL_RULES FALSE)
 endif()
 
