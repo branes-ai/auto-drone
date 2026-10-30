@@ -63,7 +63,7 @@ jobs:
         run: ctest --preset linux-release --output-on-failure
 
   build-macos:
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -71,7 +71,11 @@ jobs:
       - name: Install system dependencies
         run: |
           brew update
-          brew install cmake ninja opencv pkg-config
+          # OpenCV 4, as on Linux and Windows: brew's opencv is 5.x, which
+          # moved APIs this code uses. opencv@4 is keg-only, so CMake is
+          # pointed at it. Homebrew disables it on 2027-07-09.
+          brew install cmake ninja opencv@4 pkg-config
+          echo "CMAKE_PREFIX_PATH=$(brew --prefix opencv@4)" >> "$GITHUB_ENV"
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
