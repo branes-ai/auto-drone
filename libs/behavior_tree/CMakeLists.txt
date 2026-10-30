@@ -8,11 +8,12 @@
 
 include(FetchContent)
 
-# Fetch BehaviorTree.CPP v4.6
+# Fetch BehaviorTree.CPP v4.7. 4.6.x bundles a lexy with a typo (`_colum_nr`)
+# that AppleClang 17 rejects; 4.7.0 has the fix.
 FetchContent_Declare(
     behaviortree_cpp
     GIT_REPOSITORY https://github.com/BehaviorTree/BehaviorTree.CPP.git
-    GIT_TAG        4.6.2
+    GIT_TAG        4.7.0
 )
 
 # Configure BT.CPP options - disable everything except core
