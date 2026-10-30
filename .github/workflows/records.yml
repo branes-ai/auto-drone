@@ -6,10 +6,11 @@ on:
     branches: [main]
   workflow_dispatch:
 
-# A new push to a PR supersedes its in-flight run; runs on main are never
-# cancelled.
+# A new push to a PR supersedes its in-flight run. Each run on main has a
+# group of its own (its run id), so none is cancelled or replaced while
+# pending.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 # Top-level least-privilege default.
