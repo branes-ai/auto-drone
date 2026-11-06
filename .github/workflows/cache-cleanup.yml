@@ -24,7 +24,7 @@ jobs:
   cleanup:
     name: Delete closed pull requests' caches
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 60
     env:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
@@ -33,16 +33,31 @@ jobs:
       - name: Delete the caches
         run: |
           set -euo pipefail
-          # Every cache of one ref, in pages, until none is left, or a page
-          # deletes nothing (so a cache that can't be deleted can't loop).
+          # GitHub throttles cache requests (HTTP 429), and allows about 80
+          # deletes a minute and 500 an hour. A throttled call waits a minute
+          # and is tried again, up to five times; deletes go one a second.
+          retry() {
+            local n
+            for n in 1 2 3 4 5; do
+              "$@" && return 0
+              echo "throttled, waiting a minute" >&2
+              sleep 60
+            done
+            "$@"
+          }
+          # Every cache of one ref, a page at a time. A cache that still can't
+          # be deleted stops this ref, so nothing can loop for good.
           delete_ref() {
-            local ref=$1 n=0 before ids
-            while ids=$(gh cache list --ref "$ref" --limit 100 --json id --jq '.[].id') && [ -n "$ids" ]; do
-              before=$n
+            local ref=$1 ids id n=0
+            while ids=$(retry gh cache list --ref "$ref" --limit 100 --json id --jq '.[].id') && [ -n "$ids" ]; do
               for id in $ids; do
-                gh cache delete "$id" && n=$((n + 1))
+                if ! retry gh cache delete "$id" >/dev/null; then
+                  echo "::warning::$ref: cache $id could not be deleted"
+                  break 2
+                fi
+                n=$((n + 1))
+                sleep 1
               done
-              [ "$n" -gt "$before" ] || { echo "::warning::$ref: a page of caches could not be deleted"; break; }
             done
             echo "$ref: deleted $n"
           }
@@ -50,11 +65,11 @@ jobs:
             delete_ref "refs/pull/$PR/merge"
           else
             # Every pull request ref with caches whose pull request is closed.
-            refs=$(gh api --paginate "repos/$GH_REPO/actions/caches?per_page=100" \
+            refs=$(retry gh api --paginate "repos/$GH_REPO/actions/caches?per_page=100" \
                      --jq '.actions_caches[].ref' | grep -E '^refs/pull/[0-9]+/merge$' | sort -u || true)
             for ref in $refs; do
               num=${ref#refs/pull/}; num=${num%/merge}
-              if [ "$(gh pr view "$num" --json state --jq .state)" != OPEN ]; then
+              if [ "$(retry gh pr view "$num" --json state --jq .state)" != OPEN ]; then
                 delete_ref "$ref"
               fi
             done
