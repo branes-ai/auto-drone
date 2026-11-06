@@ -1,0 +1,61 @@
+name: Cache cleanup
+
+# The Actions cache holds 10 GB per repository, and GitHub evicts the oldest
+# entries past that. A pull request's caches are only readable by that pull
+# request, so once it closes they are dead weight that pushes out main's, which
+# every pull request reads.
+#
+# When a pull request closes, merged or not, this deletes its caches. Run it by
+# hand to sweep the caches of every closed pull request.
+#
+# pull_request_target, so that a pull request from a fork gets a token that can
+# delete caches. It checks out no code and runs nothing from the pull request.
+
+on:
+  pull_request_target:
+    types: [closed]
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  pull-requests: read
+
+jobs:
+  cleanup:
+    name: Delete closed pull requests' caches
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      PR: ${{ github.event.pull_request.number }}
+    steps:
+      - name: Delete the caches
+        run: |
+          set -euo pipefail
+          # Every cache of one ref, in pages, until none is left, or a page
+          # deletes nothing (so a cache that can't be deleted can't loop).
+          delete_ref() {
+            local ref=$1 n=0 before ids
+            while ids=$(gh cache list --ref "$ref" --limit 100 --json id --jq '.[].id') && [ -n "$ids" ]; do
+              before=$n
+              for id in $ids; do
+                gh cache delete "$id" && n=$((n + 1))
+              done
+              [ "$n" -gt "$before" ] || { echo "::warning::$ref: a page of caches could not be deleted"; break; }
+            done
+            echo "$ref: deleted $n"
+          }
+          if [ -n "$PR" ]; then
+            delete_ref "refs/pull/$PR/merge"
+          else
+            # Every pull request ref with caches whose pull request is closed.
+            refs=$(gh api --paginate "repos/$GH_REPO/actions/caches?per_page=100" \
+                     --jq '.actions_caches[].ref' | grep -E '^refs/pull/[0-9]+/merge$' | sort -u || true)
+            for ref in $refs; do
+              num=${ref#refs/pull/}; num=${num%/merge}
+              if [ "$(gh pr view "$num" --json state --jq .state)" != OPEN ]; then
+                delete_ref "$ref"
+              fi
+            done
+          fi
