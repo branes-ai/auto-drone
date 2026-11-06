@@ -33,9 +33,9 @@ jobs:
       - name: Delete the caches
         run: |
           set -euo pipefail
-          # GitHub throttles cache requests (HTTP 429), and allows about 80
-          # deletes a minute and 500 an hour. A throttled call waits a minute
-          # and is tried again, up to five times; deletes go one a second.
+          # GitHub throttles a burst of cache requests (HTTP 429), so deletes
+          # go one at a time, which ran at about three a second, and a
+          # throttled call waits a minute and is tried again, up to five times.
           retry() {
             local n
             for n in 1 2 3 4 5; do
@@ -56,7 +56,6 @@ jobs:
                   break 2
                 fi
                 n=$((n + 1))
-                sleep 1
               done
             done
             echo "$ref: deleted $n"
