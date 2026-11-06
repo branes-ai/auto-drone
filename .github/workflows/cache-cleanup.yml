@@ -1,0 +1,108 @@
+name: Cache cleanup
+
+# The Actions cache holds 10 GB per repository, and GitHub evicts the oldest
+# entries past that. A pull request's caches are only readable by that pull
+# request, so once it closes they are dead weight that pushes out main's, which
+# every pull request reads.
+#
+# When a pull request closes, merged or not, this deletes its caches. Run it by
+# hand to sweep the caches of every closed pull request.
+#
+# pull_request_target, so that a pull request from a fork gets a token that can
+# delete caches. It checks out no code and runs nothing from the pull request.
+
+on:
+  pull_request_target:  # zizmor: ignore[dangerous-triggers] checks out no code; reads only the PR number
+    types: [closed]
+  workflow_dispatch:
+
+# One run at a time per pull request, and one sweep at a time. A group keeps
+# only one pending run, so a single group would let closes that queue behind a
+# long sweep replace each other. Runs that overlap are safe: a cache another
+# run deleted counts as deleted.
+concurrency:
+  group: cache-cleanup-${{ github.event.pull_request.number || 'sweep' }}
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  cleanup:
+    name: Delete closed pull requests' caches
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      actions: write        # list and delete caches
+      pull-requests: read   # read a pull request's state in the sweep
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      PR: ${{ github.event.pull_request.number }}
+    steps:
+      - name: Delete the caches
+        run: |
+          set -euo pipefail
+          # GitHub throttles a burst of cache requests (HTTP 429), so deletes
+          # go one at a time, which ran at about three a second, and a failed
+          # call waits a minute and is tried again, up to five times. A call
+          # that still fails fails the step: no API error passes as success.
+          retry() {
+            local n
+            for n in 1 2 3 4 5; do
+              "$@" && return 0
+              echo "failed, waiting a minute: $*" >&2
+              sleep 60
+            done
+            "$@"
+          }
+          # Delete one cache. A cache that is already gone (deleted by another
+          # run) counts as deleted.
+          delete_cache() {
+            local ref=$1 id=$2 left err
+            err=$(gh cache delete "$id" 2>&1 >/dev/null) && return 0
+            left=$(gh cache list --ref "$ref" --limit 10000 --json id --jq '.[].id') || return 1
+            if grep -qx "$id" <<<"$left"; then
+              echo "cache $id: $err" >&2
+              return 1
+            fi
+          }
+          # Every cache of one ref, a page at a time. A page that comes back
+          # unchanged fails the step, so nothing can loop.
+          delete_ref() {
+            local ref=$1 ids prev="" id n=0
+            while :; do
+              ids=$(retry gh cache list --ref "$ref" --limit 100 --json id --jq '.[].id')
+              [ -n "$ids" ] || break
+              if [ "$ids" = "$prev" ]; then
+                echo "::error::$ref: the same caches came back after deleting them"
+                exit 1
+              fi
+              prev=$ids
+              for id in $ids; do
+                retry delete_cache "$ref" "$id"
+                n=$((n + 1))
+              done
+            done
+            echo "$ref: deleted $n"
+          }
+          if [ -n "$PR" ]; then
+            delete_ref "refs/pull/$PR/merge"
+          else
+            # Every pull request ref with caches, and of those, the ones whose
+            # pull request is positively closed or merged.
+            all=$(retry gh api --paginate "repos/$GH_REPO/actions/caches?per_page=100" --jq '.actions_caches[].ref')
+            refs=$({ grep -E '^refs/pull/[0-9]+/merge$' <<<"$all" || true; } | sort -u)
+            for ref in $refs; do
+              num=${ref#refs/pull/}
+              num=${num%/merge}
+              state=$(retry gh pr view "$num" --json state --jq .state)
+              case "$state" in
+                CLOSED | MERGED) delete_ref "$ref" ;;
+                OPEN) ;;
+                *)
+                  echo "::error::#$num: unexpected state '$state'"
+                  exit 1
+                  ;;
+              esac
+            done
+          fi
